@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.ncu.csh</groupId>
+        <artifactId>HealthSystem</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>health-appointment</artifactId>
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ncu.csh</groupId>
+            <artifactId>health-common</artifactId>
+        </dependency>
+        <!-- 预约界面用到检查组和检查项下拉数据 -->
+        <dependency>
+            <groupId>com.ncu.csh</groupId>
+            <artifactId>health-checkitem</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ncu.csh</groupId>
+            <artifactId>health-checkgroup</artifactId>
+        </dependency>
+    </dependencies>
+</project>
