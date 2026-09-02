@@ -108,7 +108,9 @@ public class MainView extends JFrame {
         nav.setLayout(new BoxLayout(nav, BoxLayout.Y_AXIS));
         nav.setOpaque(false);
         nav.setPreferredSize(new Dimension(200, 0));
-        nav.add(Box.createVerticalStrut(10));
+
+        nav.add(buildUserCard());
+        nav.add(Box.createVerticalStrut(16));
 
         if (isAdmin) {
             nav.add(navButton("检查项管理", UITheme.TEAL, "检查项管理"));
@@ -140,6 +142,38 @@ public class MainView extends JFrame {
         b.setCursor(new Cursor(Cursor.HAND_CURSOR));
         b.addActionListener(e -> showModule(cardName));
         return b;
+    }
+
+    /** 侧边栏顶部的欢迎卡片 */
+    private JPanel buildUserCard() {
+        String name = Session.currentUser.getRealName() == null
+                ? Session.currentUser.getUsername() : Session.currentUser.getRealName();
+        String role = Session.currentUser.getRole();
+        String roleText = (role == null || role.isEmpty()) ? "普通用户" : role;
+
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(new Color(255, 255, 255, 235));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                new UITheme.RoundedBorder(new Color(0xE2, 0xE8, 0xF0), 14),
+                BorderFactory.createEmptyBorder(16, 12, 16, 12)));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+
+        JLabel welcome = new JLabel("欢迎登录", SwingConstants.CENTER);
+        welcome.setFont(new Font("Microsoft YaHei", Font.BOLD, 15));
+        welcome.setForeground(UITheme.PRIMARY);
+        welcome.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel info = new JLabel(name + " · " + roleText, SwingConstants.CENTER);
+        info.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
+        info.setForeground(UITheme.TEXT_GRAY);
+        info.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        card.add(welcome);
+        card.add(Box.createVerticalStrut(6));
+        card.add(info);
+        return card;
     }
 
     /** 切换模块：切到报表统计时刷新数字 */
