@@ -108,18 +108,19 @@ public class MainView extends JFrame {
         nav.setLayout(new BoxLayout(nav, BoxLayout.Y_AXIS));
         nav.setOpaque(false);
         nav.setPreferredSize(new Dimension(200, 0));
+        nav.add(Box.createVerticalStrut(10));
 
         if (isAdmin) {
             nav.add(navButton("检查项管理", UITheme.TEAL, "检查项管理"));
-            nav.add(Box.createVerticalStrut(12));
+            nav.add(Box.createVerticalStrut(20));
             nav.add(navButton("检查组管理", UITheme.PRIMARY, "检查组管理"));
-            nav.add(Box.createVerticalStrut(12));
+            nav.add(Box.createVerticalStrut(20));
         }
         nav.add(navButton("预约与跟踪", UITheme.ORANGE, "预约与跟踪"));
         nav.add(Box.createVerticalStrut(12));
         nav.add(navButton("报表统计", UITheme.GREEN, "报表统计"));
         if (isAdmin) {
-            nav.add(Box.createVerticalStrut(12));
+            nav.add(Box.createVerticalStrut(20));
             nav.add(navButton("用户管理", UITheme.PURPLE, "用户管理"));
         }
         nav.add(Box.createVerticalGlue());
