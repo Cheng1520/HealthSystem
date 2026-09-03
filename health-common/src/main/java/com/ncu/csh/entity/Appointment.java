@@ -12,6 +12,7 @@ public class Appointment {
     private String appointDate;   // 预约日期
     private String status;        // 状态：已预约 / 已完成
     private String remark;        // 备注
+    private String suggestion;    // 医生诊断建议
 
     // 展示用（关联查询带出）
     private String userName;      // 用户名/姓名
@@ -36,6 +37,8 @@ public class Appointment {
     public void setStatus(String status) { this.status = status; }
     public String getRemark() { return remark; }
     public void setRemark(String remark) { this.remark = remark; }
+    public String getSuggestion() { return suggestion; }
+    public void setSuggestion(String suggestion) { this.suggestion = suggestion; }
     public String getUserName() { return userName; }
     public void setUserName(String userName) { this.userName = userName; }
     public String getGroupName() { return groupName; }

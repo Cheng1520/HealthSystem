@@ -20,7 +20,7 @@ public class AppointmentDAO {
     /** 查询全部预约（关联带出用户名/检查组名/检查项名），按用户关键词搜索 */
     public List<Appointment> queryList(String keyword) {
         String sql = "SELECT a.id,a.user_id,a.method,a.check_group_id,a.check_item_id,"
-                + "a.appoint_date,a.status,a.remark,"
+                + "a.appoint_date,a.status,a.remark,a.suggestion,"
                 + "u.username,u.real_name,g.group_name,i.item_name "
                 + "FROM appointment a "
                 + "LEFT JOIN user u ON a.user_id=u.id "
@@ -53,7 +53,7 @@ public class AppointmentDAO {
     /** 按 id 查询单条预约 */
     public Appointment getById(int id) {
         String sql = "SELECT a.id,a.user_id,a.method,a.check_group_id,a.check_item_id,"
-                + "a.appoint_date,a.status,a.remark,"
+                + "a.appoint_date,a.status,a.remark,a.suggestion,"
                 + "u.username,u.real_name,g.group_name,i.item_name "
                 + "FROM appointment a "
                 + "LEFT JOIN user u ON a.user_id=u.id "
@@ -327,6 +327,156 @@ public class AppointmentDAO {
         }
     }
 
+    /** 查询某用户的全部预约（普通用户只能看自己的预约） */
+    public List<Appointment> queryListByUser(int userId) {
+        String sql = "SELECT a.id,a.user_id,a.method,a.check_group_id,a.check_item_id,"
+                + "a.appoint_date,a.status,a.remark,a.suggestion,"
+                + "u.username,u.real_name,g.group_name,i.item_name "
+                + "FROM appointment a "
+                + "LEFT JOIN user u ON a.user_id=u.id "
+                + "LEFT JOIN check_group g ON a.check_group_id=g.id "
+                + "LEFT JOIN check_item i ON a.check_item_id=i.id "
+                + "WHERE a.user_id=? "
+                + "ORDER BY a.id DESC";
+        List<Appointment> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+            return list;
+        } catch (SQLException e) {
+            throw new RuntimeException("查询预约失败", e);
+        } finally {
+            DBUtil.close(rs, ps, conn);
+        }
+    }
+
+    /** 查询某用户的检查报告（仅含已有检查结果的预约，用于历史检查报告） */
+    public List<Appointment> listReportsByUser(int userId) {
+        String sql = "SELECT a.id,a.user_id,a.method,a.check_group_id,a.check_item_id,"
+                + "a.appoint_date,a.status,a.remark,a.suggestion,"
+                + "u.username,u.real_name,g.group_name,i.item_name "
+                + "FROM appointment a "
+                + "LEFT JOIN user u ON a.user_id=u.id "
+                + "LEFT JOIN check_group g ON a.check_group_id=g.id "
+                + "LEFT JOIN check_item i ON a.check_item_id=i.id "
+                + "WHERE a.user_id=? AND EXISTS (SELECT 1 FROM check_result r WHERE r.appointment_id=a.id) "
+                + "ORDER BY a.id DESC";
+        List<Appointment> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, userId);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+            return list;
+        } catch (SQLException e) {
+            throw new RuntimeException("查询检查报告失败", e);
+        } finally {
+            DBUtil.close(rs, ps, conn);
+        }
+    }
+
+    /** 查询全部检查报告（医生/管理员），可按用户名/姓名关键词搜索 */
+    public List<Appointment> listReportsAll(String keyword) {
+        String sql = "SELECT a.id,a.user_id,a.method,a.check_group_id,a.check_item_id,"
+                + "a.appoint_date,a.status,a.remark,a.suggestion,"
+                + "u.username,u.real_name,g.group_name,i.item_name "
+                + "FROM appointment a "
+                + "LEFT JOIN user u ON a.user_id=u.id "
+                + "LEFT JOIN check_group g ON a.check_group_id=g.id "
+                + "LEFT JOIN check_item i ON a.check_item_id=i.id "
+                + "WHERE (u.username LIKE ? OR u.real_name LIKE ?) "
+                + "AND EXISTS (SELECT 1 FROM check_result r WHERE r.appointment_id=a.id) "
+                + "ORDER BY a.id DESC";
+        List<Appointment> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            String like = "%" + (keyword == null ? "" : keyword.trim()) + "%";
+            ps.setString(1, like);
+            ps.setString(2, like);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(mapRow(rs));
+            }
+            return list;
+        } catch (SQLException e) {
+            throw new RuntimeException("查询检查报告失败", e);
+        } finally {
+            DBUtil.close(rs, ps, conn);
+        }
+    }
+
+    /** 查询某预约下的全部检查结果（含检查项名称与单位） */
+    public List<CheckResult> listResultsByAppointment(int appointmentId) {
+        String sql = "SELECT r.id,r.appointment_id,r.item_id,r.value,r.analysis,r.check_date,"
+                + "i.item_name,i.unit "
+                + "FROM check_result r "
+                + "JOIN check_item i ON r.item_id=i.id "
+                + "WHERE r.appointment_id=? ORDER BY r.id";
+        List<CheckResult> list = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setInt(1, appointmentId);
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                CheckResult r = new CheckResult();
+                r.setId(rs.getInt("id"));
+                r.setAppointmentId(rs.getInt("appointment_id"));
+                r.setItemId(rs.getInt("item_id"));
+                r.setValue(rs.getDouble("value"));
+                r.setAnalysis(rs.getString("analysis"));
+                r.setCheckDate(rs.getString("check_date"));
+                r.setItemName(rs.getString("item_name"));
+                r.setUnit(rs.getString("unit"));
+                list.add(r);
+            }
+            return list;
+        } catch (SQLException e) {
+            throw new RuntimeException("查询检查结果失败", e);
+        } finally {
+            DBUtil.close(rs, ps, conn);
+        }
+    }
+
+    /** 医生为某次检查报告填写/更新诊断建议 */
+    public int updateSuggestion(int appointmentId, String suggestion) {
+        String sql = "UPDATE appointment SET suggestion=? WHERE id=?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, suggestion);
+            ps.setInt(2, appointmentId);
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("保存诊断建议失败", e);
+        } finally {
+            DBUtil.close(ps, conn);
+        }
+    }
+
     private void setInt(PreparedStatement ps, int idx, Integer v) throws SQLException {
         if (v == null) {
             ps.setNull(idx, java.sql.Types.INTEGER);
@@ -347,6 +497,7 @@ public class AppointmentDAO {
         a.setAppointDate(rs.getString("appoint_date"));
         a.setStatus(rs.getString("status"));
         a.setRemark(rs.getString("remark"));
+        a.setSuggestion(rs.getString("suggestion"));
         String realName = rs.getString("real_name");
         String username = rs.getString("username");
         a.setUserName((realName == null || realName.isEmpty()) ? username : realName);

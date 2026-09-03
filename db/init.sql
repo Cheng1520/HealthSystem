@@ -75,6 +75,7 @@ CREATE TABLE `appointment` (
     `appoint_date`   VARCHAR(20)  DEFAULT NULL            COMMENT '预约日期',
     `status`         VARCHAR(10)  DEFAULT '已预约'         COMMENT '状态: 已预约/已完成',
     `remark`         VARCHAR(255) DEFAULT NULL            COMMENT '备注',
+    `suggestion`     VARCHAR(500) DEFAULT NULL            COMMENT '医生诊断建议',
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_appt_user`  FOREIGN KEY (`user_id`)        REFERENCES `user` (`id`)        ON DELETE CASCADE,
     CONSTRAINT `fk_appt_group` FOREIGN KEY (`check_group_id`) REFERENCES `check_group` (`id`) ON DELETE SET NULL,
@@ -145,3 +146,6 @@ INSERT INTO `check_result` (`appointment_id`, `item_id`, `value`, `analysis`, `c
 (4, 4, 5.1, '正常', '2026-06-10'),
 (5, 4, 5.6, '正常', '2026-07-10'),
 (6, 4, 6.5, '偏高', '2026-08-10');
+
+-- 医生对某次检查报告的诊断建议（演示“历史检查报告 / 医生诊断建议”）
+UPDATE `appointment` SET `suggestion` = '血糖三次复查呈上升趋势，建议控制饮食、增加运动，一周后复测空腹血糖。' WHERE `id` = 6;

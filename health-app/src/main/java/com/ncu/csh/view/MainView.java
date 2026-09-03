@@ -1,18 +1,14 @@
 package com.ncu.csh.view;
 
-import com.ncu.csh.dao.AppointmentDAO;
-import com.ncu.csh.dao.CheckGroupDAO;
-import com.ncu.csh.dao.CheckItemDAO;
 import com.ncu.csh.dao.UserDAO;
+import com.ncu.csh.entity.User;
 import com.ncu.csh.util.AvatarUtil;
 import com.ncu.csh.util.MD5Util;
-import com.ncu.csh.util.ReportUtil;
 import com.ncu.csh.util.Session;
 import com.ncu.csh.util.UITheme;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -22,16 +18,6 @@ import java.util.List;
 public class MainView extends JFrame {
 
     private final UserDAO userDAO = new UserDAO();
-    private final CheckItemDAO checkItemDAO = new CheckItemDAO();
-    private final CheckGroupDAO checkGroupDAO = new CheckGroupDAO();
-    private final AppointmentDAO appointmentDAO = new AppointmentDAO();
-
-    // 报表统计卡片上的数值标签（用于刷新）
-    private JLabel lbUser;
-    private JLabel lbItem;
-    private JLabel lbGroup;
-    private JLabel lbToday;
-    private JLabel lbAppoint;
 
     private JPanel content;
     private CardLayout cardLayout;
@@ -70,7 +56,7 @@ public class MainView extends JFrame {
         cardLayout.show(content, defaultCard);
     }
 
-    /** 顶部标题栏：左侧标题，右上角 修改密码 / 退出登录 */
+    /** 顶部标题栏：左侧标题，右上角 修改个人信息 / 退出登录 */
     private JPanel buildHeader(String displayName, String roleText) {
         JPanel header = UITheme.gradientHeader("健康管理系统", "欢迎，" + displayName + roleText);
         header.setLayout(new BorderLayout());
@@ -87,11 +73,11 @@ public class MainView extends JFrame {
         titleArea.add(t1);
         titleArea.add(t2);
 
-        JButton btnChangePwd = UITheme.headerButton("修改密码");
+        JButton btnEditProfile = UITheme.headerButton("修改个人信息");
         JButton btnLogout = UITheme.headerButton("退出登录");
         JPanel topRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 6));
         topRight.setOpaque(false);
-        topRight.add(btnChangePwd);
+        topRight.add(btnEditProfile);
         topRight.add(btnLogout);
 
         header.add(titleArea, BorderLayout.WEST);
@@ -102,7 +88,7 @@ public class MainView extends JFrame {
             dispose();
             new LoginView(() -> new MainView().setVisible(true)).setVisible(true);
         });
-        btnChangePwd.addActionListener(e -> changePassword());
+        btnEditProfile.addActionListener(e -> editProfile());
         return header;
     }
 
@@ -110,12 +96,12 @@ public class MainView extends JFrame {
     private List<String> roleModules() {
         String role = Session.currentUser.getRole();
         if ("管理员".equals(role)) {
-            return Arrays.asList("检查项管理", "检查组管理", "预约与跟踪", "报表统计", "用户管理");
+            return Arrays.asList("检查项管理", "检查组管理", "预约与跟踪", "历史检查报告", "用户管理");
         }
         if ("医生".equals(role)) {
-            return Arrays.asList("检查项管理", "检查组管理", "预约与跟踪", "报表统计");
+            return Arrays.asList("检查项管理", "检查组管理", "预约与跟踪", "历史检查报告");
         }
-        return Arrays.asList("预约与跟踪", "报表统计");
+        return Arrays.asList("预约与跟踪", "历史检查报告");
     }
 
     /** 模块名 → 导航图标 */
@@ -124,7 +110,7 @@ public class MainView extends JFrame {
             case "检查项管理": return "📋";
             case "检查组管理": return "📑";
             case "预约与跟踪": return "📅";
-            case "报表统计": return "📊";
+            case "历史检查报告": return "🩺";
             case "用户管理": return "👤";
             default: return "•";
         }
@@ -226,11 +212,8 @@ public class MainView extends JFrame {
         return card;
     }
 
-    /** 切换模块：切到报表统计时刷新数字 */
+    /** 切换模块 */
     private void showModule(String cardName) {
-        if ("报表统计".equals(cardName)) {
-            refreshStats();
-        }
         cardLayout.show(content, cardName);
     }
 
@@ -243,138 +226,96 @@ public class MainView extends JFrame {
         if (modules.contains("检查项管理")) content.add(new CheckItemView(), "检查项管理");
         if (modules.contains("检查组管理")) content.add(new CheckGroupView(), "检查组管理");
         if (modules.contains("预约与跟踪")) content.add(new AppointmentView(), "预约与跟踪");
-        if (modules.contains("报表统计")) content.add(buildReportPanel(), "报表统计");
+        if (modules.contains("历史检查报告")) content.add(new HistoryReportView(), "历史检查报告");
         if (modules.contains("用户管理")) content.add(new UserManageView(), "用户管理");
         return content;
     }
 
-    /** 报表统计面板：统计卡片 + 一键导出 */
-    private JPanel buildReportPanel() {
-        JPanel panel = UITheme.backgroundPanel("bg_panel.png",
-                new Color(0xF5, 0xF9, 0xFF), new Color(0xEA, 0xF4, 0xF8));
-        panel.setLayout(new BorderLayout());
-        panel.add(UITheme.gradientHeader("报表统计", "系统各模块数据总览与一键导出"), BorderLayout.NORTH);
-
-        JPanel statPanel = new JPanel(new GridLayout(2, 3, 16, 16));
-        statPanel.setOpaque(false);
-        statPanel.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
-        lbUser = statValueLabel();
-        lbItem = statValueLabel();
-        lbGroup = statValueLabel();
-        lbToday = statValueLabel();
-        lbAppoint = statValueLabel();
-        Color c1 = UITheme.PRIMARY;
-        Color c2 = new Color(0x3A, 0x68, 0xA8);
-        Color c3 = UITheme.SECONDARY;
-        Color c4 = new Color(0x5A, 0x8A, 0xC0);
-        Color c5 = new Color(0x6B, 0x9A, 0xC8);
-        statPanel.add(statCard("用户总数", lbUser, c1));
-        statPanel.add(statCard("检查项数", lbItem, c2));
-        statPanel.add(statCard("检查组数", lbGroup, c3));
-        statPanel.add(statCard("今日预约", lbToday, c4));
-        statPanel.add(statCard("预约总数", lbAppoint, c5));
-
-        JButton btnExport = UITheme.primaryButton("一键导出系统报表");
-        btnExport.setFont(new Font("Microsoft YaHei", Font.BOLD, 15));
-        btnExport.addActionListener(e -> exportReport());
-        statPanel.add(btnExport);
-
-        JPanel center = new JPanel(new BorderLayout());
-        center.setOpaque(false);
-        center.add(statPanel, BorderLayout.NORTH);
-        panel.add(center, BorderLayout.CENTER);
-        return panel;
-    }
-
-    /** 统计卡片 */
-    private JPanel statCard(String title, JLabel valueLabel, Color color) {
-        JPanel card = new JPanel(new BorderLayout(0, 8));
-        card.setBackground(new Color(255, 255, 255, 235));
-        card.setBorder(BorderFactory.createCompoundBorder(
-                new UITheme.RoundedBorder(color, 16),
-                BorderFactory.createEmptyBorder(20, 22, 20, 22)));
-
-        valueLabel.setForeground(color);
-
-        JLabel titleLabel = new JLabel(title, SwingConstants.LEFT);
-        titleLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        titleLabel.setForeground(UITheme.TEXT_GRAY);
-
-        card.add(valueLabel, BorderLayout.CENTER);
-        card.add(titleLabel, BorderLayout.SOUTH);
-        return card;
-    }
-
-    /** 统计数值标签 */
-    private JLabel statValueLabel() {
-        JLabel l = new JLabel("0", SwingConstants.LEFT);
-        l.setFont(new Font("Microsoft YaHei", Font.BOLD, 34));
-        return l;
-    }
-
-    /** 重新查询并刷新统计数字 */
-    private void refreshStats() {
-        if (lbUser == null) {
-            return;
+    /** 修改个人信息：编辑账号、姓名、性别、年龄、电话，并可修改密码 */
+    private void editProfile() {
+        User u = Session.currentUser;
+        JTextField tfUsername = new JTextField(u.getUsername(), 12);
+        JTextField tfRealName = new JTextField(u.getRealName(), 12);
+        JComboBox<String> cbGender = new JComboBox<>(new String[]{"男", "女"});
+        if (u.getGender() != null) {
+            cbGender.setSelectedItem(u.getGender());
         }
-        lbUser.setText(String.valueOf(userDAO.countAll()));
-        lbItem.setText(String.valueOf(checkItemDAO.countAll()));
-        lbGroup.setText(String.valueOf(checkGroupDAO.countAll()));
-        lbToday.setText(String.valueOf(appointmentDAO.countToday()));
-        lbAppoint.setText(String.valueOf(appointmentDAO.countAll()));
-    }
+        JTextField tfAge = new JTextField(u.getAge() == null ? "" : String.valueOf(u.getAge()), 6);
+        JTextField tfPhone = new JTextField(u.getPhone() == null ? "" : u.getPhone(), 12);
+        JPasswordField tfPwd = new JPasswordField(12);
 
-    /** 每次显示主界面时刷新统计 */
-    @Override
-    public void setVisible(boolean b) {
-        if (b) {
-            refreshStats();
-        }
-        super.setVisible(b);
-    }
+        JPanel panel = new JPanel(new GridLayout(0, 2, 8, 8));
+        panel.add(new JLabel("用户名"));
+        panel.add(tfUsername);
+        panel.add(new JLabel("真实姓名"));
+        panel.add(tfRealName);
+        panel.add(new JLabel("性别"));
+        panel.add(cbGender);
+        panel.add(new JLabel("年龄"));
+        panel.add(tfAge);
+        panel.add(new JLabel("电话"));
+        panel.add(tfPhone);
+        panel.add(new JLabel("新密码(留空不修改)"));
+        panel.add(tfPwd);
 
-    /** 导出系统数据报表：汇总各模块数据 */
-    private void exportReport() {
-        List<String[]> rows = new ArrayList<>();
-        rows.add(new String[]{"用户总数", String.valueOf(userDAO.countAll()), "用户管理模块", ""});
-        rows.add(new String[]{"检查项数", String.valueOf(checkItemDAO.countAll()), "检查项管理模块", ""});
-        rows.add(new String[]{"检查组数", String.valueOf(checkGroupDAO.countAll()), "检查组管理模块", ""});
-        rows.add(new String[]{"预约总数", String.valueOf(appointmentDAO.countAll()), "预约与跟踪模块", ""});
-        rows.add(new String[]{"今日预约", String.valueOf(appointmentDAO.countToday()), "预约与跟踪模块", ""});
-        ReportUtil.exportHtml("健康管理系统总览报表",
-                new String[]{"统计项", "数值", "所属模块", "备注"}, rows);
-    }
-
-    private void changePassword() {
-        JPanel panel = new JPanel(new GridLayout(3, 2, 8, 8));
-        JPasswordField tfOld = new JPasswordField();
-        JPasswordField tfNew = new JPasswordField();
-        JPasswordField tfNew2 = new JPasswordField();
-        panel.add(new JLabel("原密码"));
-        panel.add(tfOld);
-        panel.add(new JLabel("新密码"));
-        panel.add(tfNew);
-        panel.add(new JLabel("确认新密码"));
-        panel.add(tfNew2);
-
-        int r = JOptionPane.showConfirmDialog(this, panel, "修改密码", JOptionPane.OK_CANCEL_OPTION);
+        int r = JOptionPane.showConfirmDialog(this, panel, "修改个人信息", JOptionPane.OK_CANCEL_OPTION);
         if (r != JOptionPane.OK_OPTION) {
             return;
         }
-        String oldPwd = new String(tfOld.getPassword());
-        String newPwd = new String(tfNew.getPassword());
-        String newPwd2 = new String(tfNew2.getPassword());
 
-        if (!Session.currentUser.getPassword().equals(MD5Util.md5(oldPwd))) {
-            JOptionPane.showMessageDialog(this, "原密码错误", "提示", JOptionPane.WARNING_MESSAGE);
+        String username = tfUsername.getText().trim();
+        if (username.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "用户名不能为空", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        if (newPwd.isEmpty() || !newPwd.equals(newPwd2)) {
-            JOptionPane.showMessageDialog(this, "新密码为空或不一致", "提示", JOptionPane.WARNING_MESSAGE);
+        if (!username.equals(u.getUsername()) && userDAO.existsByUsername(username)) {
+            JOptionPane.showMessageDialog(this, "该用户名已被使用", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        userDAO.updatePassword(Session.currentUser.getId(), MD5Util.md5(newPwd));
-        Session.currentUser.setPassword(MD5Util.md5(newPwd));
-        JOptionPane.showMessageDialog(this, "密码修改成功");
+        Integer age = null;
+        String ageStr = tfAge.getText().trim();
+        if (!ageStr.isEmpty()) {
+            try {
+                age = Integer.parseInt(ageStr);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "年龄必须是数字", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+
+        String realName = tfRealName.getText().trim();
+        String gender = (String) cbGender.getSelectedItem();
+        String phone = tfPhone.getText().trim();
+        String newPwd = new String(tfPwd.getPassword());
+
+        User updated = new User();
+        updated.setId(u.getId());
+        updated.setUsername(username);
+        updated.setRealName(realName);
+        updated.setGender(gender);
+        updated.setAge(age);
+        updated.setPhone(phone);
+
+        try {
+            userDAO.updateProfile(updated);
+            if (!newPwd.isEmpty()) {
+                userDAO.updatePassword(u.getId(), MD5Util.md5(newPwd));
+            }
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        u.setUsername(username);
+        u.setRealName(realName);
+        u.setGender(gender);
+        u.setAge(age);
+        u.setPhone(phone);
+        if (!newPwd.isEmpty()) {
+            u.setPassword(MD5Util.md5(newPwd));
+        }
+        JOptionPane.showMessageDialog(this, "个人信息已更新");
+        dispose();
+        new MainView().setVisible(true);
     }
 }

@@ -7,8 +7,10 @@ import com.ncu.csh.entity.Appointment;
 import com.ncu.csh.entity.CheckGroup;
 import com.ncu.csh.entity.CheckItem;
 import com.ncu.csh.entity.CheckResult;
+import com.ncu.csh.util.DateChooser;
 import com.ncu.csh.util.ReportUtil;
 import com.ncu.csh.util.ResultAnalyzer;
+import com.ncu.csh.util.Session;
 import com.ncu.csh.util.UITheme;
 
 import javax.swing.*;
@@ -32,34 +34,48 @@ public class AppointmentView extends JPanel {
     private JTextField tfSearch;
 
     public AppointmentView() {
+        boolean normal = isNormalUser();
+
         JPanel bg = UITheme.backgroundPanel("bg_panel.png", new Color(0xF5, 0xF9, 0xFF), new Color(0xEA, 0xF4, 0xF8));
         bg.setLayout(new BorderLayout());
         setLayout(new BorderLayout());
         add(bg, BorderLayout.CENTER);
         bg.add(UITheme.gradientHeader("预约与跟踪", "预约体检 · 结果分析 · 病史对比"), BorderLayout.NORTH);
 
-        // 顶部工具栏
+        // 顶部工具栏（普通用户只能新增与导出自己的预约，不能搜索/修改/删除/录结果）
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         toolbar.setOpaque(false);
         toolbar.setBorder(BorderFactory.createEmptyBorder(12, 14, 14, 14));
-        toolbar.add(new JLabel("搜索用户"));
-        tfSearch = UITheme.textField(12);
-        toolbar.add(tfSearch);
-        JButton btnSearch = UITheme.blueButton("查询");
+
+        JButton btnSearch = null;
         JButton btnAdd = UITheme.blueButton("新增预约");
-        JButton btnEdit = UITheme.orangeButton("修改");
-        JButton btnDelete = UITheme.redButton("删除");
-        JButton btnFinish = UITheme.plainButton("标记完成");
-        JButton btnResult = UITheme.plainButton("录入结果");
-        JButton btnHistory = UITheme.plainButton("病史对比");
+        JButton btnEdit = null;
+        JButton btnDelete = null;
+        JButton btnFinish = null;
+        JButton btnResult = null;
+        JButton btnHistory = null;
         JButton btnExport = UITheme.plainButton("导出报表");
-        toolbar.add(btnSearch);
+
+        if (!normal) {
+            toolbar.add(new JLabel("搜索用户"));
+            tfSearch = UITheme.textField(12);
+            toolbar.add(tfSearch);
+            btnSearch = UITheme.blueButton("查询");
+            toolbar.add(btnSearch);
+        }
         toolbar.add(btnAdd);
-        toolbar.add(btnEdit);
-        toolbar.add(btnDelete);
-        toolbar.add(btnFinish);
-        toolbar.add(btnResult);
-        toolbar.add(btnHistory);
+        if (!normal) {
+            btnEdit = UITheme.orangeButton("修改");
+            btnDelete = UITheme.redButton("删除");
+            btnFinish = UITheme.plainButton("标记完成");
+            btnResult = UITheme.plainButton("录入结果");
+            btnHistory = UITheme.plainButton("病史对比");
+            toolbar.add(btnEdit);
+            toolbar.add(btnDelete);
+            toolbar.add(btnFinish);
+            toolbar.add(btnResult);
+            toolbar.add(btnHistory);
+        }
         toolbar.add(btnExport);
         bg.add(toolbar, BorderLayout.NORTH);
 
@@ -79,23 +95,32 @@ public class AppointmentView extends JPanel {
 
         loadData();
 
-        btnSearch.addActionListener(e -> loadData());
+        if (btnSearch != null) btnSearch.addActionListener(e -> loadData());
         btnAdd.addActionListener(e -> showEditDialog(null));
-        btnEdit.addActionListener(e -> {
+        if (btnEdit != null) btnEdit.addActionListener(e -> {
             Appointment a = getSelected();
             if (a != null) showEditDialog(a);
         });
-        btnDelete.addActionListener(e -> deleteSelected());
-        btnFinish.addActionListener(e -> finishSelected());
-        btnResult.addActionListener(e -> inputResult());
-        btnHistory.addActionListener(e -> historyCompare());
+        if (btnDelete != null) btnDelete.addActionListener(e -> deleteSelected());
+        if (btnFinish != null) btnFinish.addActionListener(e -> finishSelected());
+        if (btnResult != null) btnResult.addActionListener(e -> inputResult());
+        if (btnHistory != null) btnHistory.addActionListener(e -> historyCompare());
         btnExport.addActionListener(e -> export());
+    }
+
+    private boolean isNormalUser() {
+        return Session.currentUser != null && "普通用户".equals(Session.currentUser.getRole());
     }
 
     private void loadData() {
         tableModel.setRowCount(0);
-        String keyword = tfSearch.getText().trim();
-        List<Appointment> list = appointmentDAO.queryList(keyword);
+        List<Appointment> list;
+        if (isNormalUser()) {
+            list = appointmentDAO.queryListByUser(Session.currentUser.getId());
+        } else {
+            String keyword = tfSearch.getText().trim();
+            list = appointmentDAO.queryList(keyword);
+        }
         for (Appointment a : list) {
             tableModel.addRow(new Object[]{
                     a.getId(), a.getUserName(), a.getMethod(), a.getGroupName(), a.getItemName(),
@@ -115,14 +140,21 @@ public class AppointmentView extends JPanel {
 
     private void showEditDialog(Appointment appt) {
         boolean isEdit = appt != null;
-        List<Object[]> users = appointmentDAO.listUsers();
+        boolean normal = isNormalUser();
         List<CheckGroup> groups = checkGroupDAO.listAll();
         List<CheckItem> items = checkItemDAO.listAll();
 
-        JComboBox<String> cbUser = new JComboBox<>();
-        for (Object[] u : users) {
-            cbUser.addItem(u[0] + "-" + u[1]);
+        // 普通用户没有“预约用户”选项，默认新增本人
+        List<Object[]> users = null;
+        JComboBox<String> cbUser = null;
+        if (!normal) {
+            users = appointmentDAO.listUsers();
+            cbUser = new JComboBox<>();
+            for (Object[] u : users) {
+                cbUser.addItem(u[0] + "-" + u[1]);
+            }
         }
+
         JComboBox<String> cbMethod = new JComboBox<>(new String[]{"套餐", "单项"});
         JComboBox<String> cbGroup = new JComboBox<>();
         for (CheckGroup g : groups) {
@@ -132,16 +164,33 @@ public class AppointmentView extends JPanel {
         for (CheckItem i : items) {
             cbItem.addItem(i.getItemName());
         }
-        JTextField tfDate = new JTextField(LocalDate.now().toString(), 12);
+
+        // 预约日期：通过日历表单选择
+        JTextField tfDate = new JTextField(LocalDate.now().toString(), 10);
+        tfDate.setEditable(false);
+        JButton btnDate = UITheme.plainButton("选择日期");
+        btnDate.addActionListener(e -> {
+            LocalDate d = DateChooser.choose(this, parseDate(tfDate.getText()));
+            if (d != null) {
+                tfDate.setText(d.toString());
+            }
+        });
+        JPanel dateRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        dateRow.setOpaque(false);
+        dateRow.add(tfDate);
+        dateRow.add(btnDate);
+
         JTextField tfRemark = new JTextField(16);
 
         if (isEdit) {
             cbMethod.setSelectedItem(appt.getMethod());
             tfDate.setText(appt.getAppointDate());
             tfRemark.setText(appt.getRemark());
-            for (int i = 0; i < cbUser.getItemCount(); i++) {
-                if (cbUser.getItemAt(i).startsWith(appt.getUserId() + "-")) {
-                    cbUser.setSelectedIndex(i);
+            if (cbUser != null) {
+                for (int i = 0; i < cbUser.getItemCount(); i++) {
+                    if (cbUser.getItemAt(i).startsWith(appt.getUserId() + "-")) {
+                        cbUser.setSelectedIndex(i);
+                    }
                 }
             }
             if (appt.getCheckGroupId() != null) {
@@ -169,17 +218,19 @@ public class AppointmentView extends JPanel {
         cbGroup.setEnabled("套餐".equals(cbMethod.getSelectedItem()));
         cbItem.setEnabled("单项".equals(cbMethod.getSelectedItem()));
 
-        JPanel panel = new JPanel(new GridLayout(6, 2, 8, 8));
-        panel.add(new JLabel("预约用户"));
-        panel.add(cbUser);
+        JPanel panel = new JPanel(new GridLayout(0, 2, 8, 8));
+        if (cbUser != null) {
+            panel.add(new JLabel("预约用户"));
+            panel.add(cbUser);
+        }
         panel.add(new JLabel("体检方式"));
         panel.add(cbMethod);
         panel.add(new JLabel("检查组"));
         panel.add(cbGroup);
         panel.add(new JLabel("检查项"));
         panel.add(cbItem);
-        panel.add(new JLabel("预约日期(yyyy-MM-dd)"));
-        panel.add(tfDate);
+        panel.add(new JLabel("预约日期"));
+        panel.add(dateRow);
         panel.add(new JLabel("备注"));
         panel.add(tfRemark);
 
@@ -188,16 +239,22 @@ public class AppointmentView extends JPanel {
         if (r != JOptionPane.OK_OPTION) return;
 
         String method = (String) cbMethod.getSelectedItem();
+        int userId;
+        if (normal) {
+            userId = Session.currentUser.getId();
+        } else {
+            userId = Integer.parseInt(String.valueOf(users.get(cbUser.getSelectedIndex())[0]));
+        }
+
         Appointment a = new Appointment();
         a.setId(isEdit ? appt.getId() : null);
-        a.setUserId(Integer.parseInt(String.valueOf(users.get(cbUser.getSelectedIndex())[0])));
+        a.setUserId(userId);
         a.setMethod(method);
         a.setCheckGroupId("套餐".equals(method) ? groups.get(cbGroup.getSelectedIndex()).getId() : null);
         a.setCheckItemId("单项".equals(method) ? items.get(cbItem.getSelectedIndex()).getId() : null);
         String dateStr = tfDate.getText().trim();
         if (!isValidDate(dateStr)) {
-            JOptionPane.showMessageDialog(this, "预约日期格式应为 yyyy-MM-dd，例如 2026-09-03", "提示",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "请选择有效的预约日期", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
         a.setAppointDate(dateStr);
@@ -213,6 +270,14 @@ public class AppointmentView extends JPanel {
             loadData();
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private LocalDate parseDate(String s) {
+        try {
+            return LocalDate.parse(s);
+        } catch (Exception e) {
+            return LocalDate.now();
         }
     }
 

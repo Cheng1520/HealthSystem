@@ -17,6 +17,7 @@ public class LoginView extends JFrame {
     private final UserDAO userDAO = new UserDAO();
     private JTextField tfUsername;
     private JPasswordField tfPassword;
+    private JComboBox<String> cbRole;
 
     /** 登录成功后的跳转动作（由入口 App 注入，用于解耦与主界面的循环依赖） */
     private final Runnable onLoginSuccess;
@@ -24,7 +25,7 @@ public class LoginView extends JFrame {
     public LoginView(Runnable onLoginSuccess) {
         this.onLoginSuccess = onLoginSuccess;
         setTitle("健康管理系统 - 登录");
-        setSize(420, 520);
+        setSize(420, 570);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
@@ -58,7 +59,7 @@ public class LoginView extends JFrame {
 
         gbc.gridy = 1;
         gbc.gridx = 0;
-        inner.add(new JLabel("用户名"), gbc);
+        inner.add(new JLabel("账号/电话"), gbc);
         gbc.gridx = 1;
         tfUsername = new JTextField(16);
         inner.add(tfUsername, gbc);
@@ -70,9 +71,16 @@ public class LoginView extends JFrame {
         tfPassword = new JPasswordField(16);
         inner.add(tfPassword, gbc);
 
+        gbc.gridy = 3;
+        gbc.gridx = 0;
+        inner.add(new JLabel("身份"), gbc);
+        gbc.gridx = 1;
+        cbRole = new JComboBox<>(new String[]{"全部", "普通用户", "医生", "管理员"});
+        inner.add(cbRole, gbc);
+
         JButton btnLogin = UITheme.primaryButton("登 录");
         btnLogin.setPreferredSize(new Dimension(0, 42));
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         gbc.gridx = 0;
         gbc.gridwidth = 2;
         inner.add(btnLogin, gbc);
@@ -91,7 +99,7 @@ public class LoginView extends JFrame {
         btnForget.setCursor(new Cursor(Cursor.HAND_CURSOR));
         linkPanel.add(btnRegister);
         linkPanel.add(btnForget);
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         inner.add(linkPanel, gbc);
 
         card.add(inner);
@@ -114,16 +122,20 @@ public class LoginView extends JFrame {
     }
 
     private void doLogin() {
-        String username = tfUsername.getText().trim();
+        String account = tfUsername.getText().trim();
         String password = new String(tfPassword.getPassword());
-        if (username.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "用户名和密码不能为空", "提示", JOptionPane.WARNING_MESSAGE);
+        String role = (String) cbRole.getSelectedItem();
+        if ("全部".equals(role)) {
+            role = null;
+        }
+        if (account.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "账号和密码不能为空", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
         try {
-            User user = userDAO.login(username, MD5Util.md5(password));
+            User user = userDAO.loginByAccount(account, MD5Util.md5(password), role);
             if (user == null) {
-                JOptionPane.showMessageDialog(this, "用户名或密码错误", "登录失败", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "账号或密码错误，或身份不匹配", "登录失败", JOptionPane.ERROR_MESSAGE);
                 return;
             }
             Session.currentUser = user;

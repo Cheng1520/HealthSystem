@@ -16,18 +16,26 @@ import java.util.List;
  */
 public class UserDAO {
 
-    /** 登录：按用户名 + 密码（MD5）查询 */
-    public User login(String username, String passwordMd5) {
-        String sql = "SELECT id,username,password,real_name,gender,age,phone,role,avatar FROM user "
-                + "WHERE username=? AND password=?";
+    /** 登录：按 用户名或电话 + 密码（MD5）+ 可选角色 查询 */
+    public User loginByAccount(String account, String passwordMd5, String role) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT id,username,password,real_name,gender,age,phone,role,avatar FROM user "
+                + "WHERE (username=? OR phone=?) AND password=?");
+        if (role != null && !role.isEmpty()) {
+            sql.append(" AND role=?");
+        }
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
         try {
             conn = DBUtil.getConnection();
-            ps = conn.prepareStatement(sql);
-            ps.setString(1, username);
-            ps.setString(2, passwordMd5);
+            ps = conn.prepareStatement(sql.toString());
+            ps.setString(1, account);
+            ps.setString(2, account);
+            ps.setString(3, passwordMd5);
+            if (role != null && !role.isEmpty()) {
+                ps.setString(4, role);
+            }
             rs = ps.executeQuery();
             if (rs.next()) {
                 return mapRow(rs);
@@ -99,6 +107,32 @@ public class UserDAO {
             return ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("修改密码失败", e);
+        } finally {
+            DBUtil.close(ps, conn);
+        }
+    }
+
+    /** 修改个人信息：更新账号、姓名、性别、年龄、电话（不含密码） */
+    public int updateProfile(User user) {
+        String sql = "UPDATE user SET username=?,real_name=?,gender=?,age=?,phone=? WHERE id=?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, user.getUsername());
+            ps.setString(2, user.getRealName());
+            ps.setString(3, user.getGender());
+            if (user.getAge() == null) {
+                ps.setNull(4, java.sql.Types.INTEGER);
+            } else {
+                ps.setInt(4, user.getAge());
+            }
+            ps.setString(5, user.getPhone());
+            ps.setInt(6, user.getId());
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("修改个人信息失败", e);
         } finally {
             DBUtil.close(ps, conn);
         }
