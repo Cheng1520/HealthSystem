@@ -33,6 +33,7 @@ public class MainView extends JFrame {
 
     private JPanel content;
     private CardLayout cardLayout;
+    private JButton activeNavButton;
 
     public MainView() {
         setTitle("健康管理系统");
@@ -75,17 +76,17 @@ public class MainView extends JFrame {
         titleArea.setLayout(new BoxLayout(titleArea, BoxLayout.Y_AXIS));
         titleArea.setOpaque(false);
         JLabel t1 = new JLabel("健康管理系统");
-        t1.setFont(new Font("Microsoft YaHei", Font.BOLD, 24));
+        t1.setFont(UITheme.FONT_BANNER);
         t1.setForeground(Color.WHITE);
         JLabel t2 = new JLabel("欢迎，" + displayName + roleText + "   |   祝您健康每一天");
-        t2.setFont(new Font("Microsoft YaHei", Font.PLAIN, 13));
-        t2.setForeground(new Color(255, 255, 255, 210));
+        t2.setFont(UITheme.FONT_SUBTITLE);
+        t2.setForeground(new Color(255, 255, 255, 200));
         titleArea.add(t1);
         titleArea.add(t2);
 
-        JButton btnChangePwd = headerLinkButton("修改密码");
-        JButton btnLogout = headerLinkButton("退出登录");
-        JPanel topRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JButton btnChangePwd = UITheme.headerButton("修改密码");
+        JButton btnLogout = UITheme.headerButton("退出登录");
+        JPanel topRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 6));
         topRight.setOpaque(false);
         topRight.add(btnChangePwd);
         topRight.add(btnLogout);
@@ -107,41 +108,63 @@ public class MainView extends JFrame {
         JPanel nav = new JPanel();
         nav.setLayout(new BoxLayout(nav, BoxLayout.Y_AXIS));
         nav.setOpaque(false);
-        nav.setPreferredSize(new Dimension(200, 0));
+        nav.setPreferredSize(new Dimension(210, 0));
 
         nav.add(buildUserCard());
-        nav.add(Box.createVerticalStrut(16));
+        nav.add(Box.createVerticalStrut(14));
 
+        String defaultCard = isAdmin ? "检查项管理" : "预约与跟踪";
         if (isAdmin) {
-            nav.add(navButton("检查项管理", UITheme.TEAL, "检查项管理"));
-            nav.add(Box.createVerticalStrut(20));
-            nav.add(navButton("检查组管理", UITheme.PRIMARY, "检查组管理"));
-            nav.add(Box.createVerticalStrut(20));
+            nav.add(navButton("📋", "检查项管理", "检查项管理", defaultCard));
+            nav.add(Box.createVerticalStrut(10));
+            nav.add(navButton("📑", "检查组管理", "检查组管理", defaultCard));
+            nav.add(Box.createVerticalStrut(10));
         }
-        nav.add(navButton("预约与跟踪", UITheme.ORANGE, "预约与跟踪"));
-        nav.add(Box.createVerticalStrut(12));
-        nav.add(navButton("报表统计", UITheme.GREEN, "报表统计"));
+        nav.add(navButton("📅", "预约与跟踪", "预约与跟踪", defaultCard));
+        nav.add(Box.createVerticalStrut(10));
+        nav.add(navButton("📊", "报表统计", "报表统计", defaultCard));
         if (isAdmin) {
-            nav.add(Box.createVerticalStrut(20));
-            nav.add(navButton("用户管理", UITheme.PURPLE, "用户管理"));
+            nav.add(Box.createVerticalStrut(10));
+            nav.add(navButton("👤", "用户管理", "用户管理", defaultCard));
         }
         nav.add(Box.createVerticalGlue());
         return nav;
     }
 
-    /** 彩色导航按钮 */
-    private JButton navButton(String text, Color color, String cardName) {
-        JButton b = new JButton(text);
-        b.setBackground(color);
-        b.setForeground(Color.WHITE);
-        b.setFont(new Font("Microsoft YaHei", Font.BOLD, 15));
+    /** 侧边导航按钮：统一主题色，图标 + 文字，当前项高亮 */
+    private JButton navButton(String icon, String text, String cardName, String defaultCard) {
+        JButton b = new JButton(icon + "  " + text);
+        b.setFont(new Font("Microsoft YaHei", Font.BOLD, 14));
         b.setFocusPainted(false);
         b.setAlignmentX(Component.LEFT_ALIGNMENT);
+        b.setHorizontalAlignment(SwingConstants.LEFT);
         b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        b.setPreferredSize(new Dimension(200, 40));
+        b.setPreferredSize(new Dimension(210, 40));
         b.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        b.addActionListener(e -> showModule(cardName));
+        b.addActionListener(e -> {
+            setActiveNav(b);
+            showModule(cardName);
+        });
+        if (cardName.equals(defaultCard)) {
+            setActiveNav(b);
+        } else {
+            setInactiveNav(b);
+        }
         return b;
+    }
+
+    private void setActiveNav(JButton b) {
+        if (activeNavButton != null && activeNavButton != b) {
+            setInactiveNav(activeNavButton);
+        }
+        activeNavButton = b;
+        b.setBackground(UITheme.PRIMARY);
+        b.setForeground(Color.WHITE);
+    }
+
+    private void setInactiveNav(JButton b) {
+        b.setBackground(UITheme.BLUE_SOFT);
+        b.setForeground(UITheme.PRIMARY);
     }
 
     /** 侧边栏顶部的欢迎卡片 */
@@ -217,11 +240,16 @@ public class MainView extends JFrame {
         lbGroup = statValueLabel();
         lbToday = statValueLabel();
         lbAppoint = statValueLabel();
-        statPanel.add(statCard("用户总数", lbUser, UITheme.PRIMARY));
-        statPanel.add(statCard("检查项数", lbItem, UITheme.TEAL));
-        statPanel.add(statCard("检查组数", lbGroup, UITheme.ORANGE));
-        statPanel.add(statCard("今日预约", lbToday, UITheme.PURPLE));
-        statPanel.add(statCard("预约总数", lbAppoint, UITheme.GREEN));
+        Color c1 = UITheme.PRIMARY;
+        Color c2 = new Color(0x3A, 0x68, 0xA8);
+        Color c3 = UITheme.SECONDARY;
+        Color c4 = new Color(0x5A, 0x8A, 0xC0);
+        Color c5 = new Color(0x6B, 0x9A, 0xC8);
+        statPanel.add(statCard("用户总数", lbUser, c1));
+        statPanel.add(statCard("检查项数", lbItem, c2));
+        statPanel.add(statCard("检查组数", lbGroup, c3));
+        statPanel.add(statCard("今日预约", lbToday, c4));
+        statPanel.add(statCard("预约总数", lbAppoint, c5));
 
         JButton btnExport = UITheme.primaryButton("一键导出系统报表");
         btnExport.setFont(new Font("Microsoft YaHei", Font.BOLD, 15));
@@ -235,19 +263,7 @@ public class MainView extends JFrame {
         return panel;
     }
 
-    /** 右上角白色文字按钮 */
-    private JButton headerLinkButton(String text) {
-        JButton b = new JButton(text);
-        b.setForeground(Color.WHITE);
-        b.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
-        b.setContentAreaFilled(false);
-        b.setBorderPainted(false);
-        b.setFocusPainted(false);
-        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return b;
-    }
-
-    /** 彩色统计卡片 */
+    /** 统计卡片 */
     private JPanel statCard(String title, JLabel valueLabel, Color color) {
         JPanel card = new JPanel(new BorderLayout(0, 8));
         card.setBackground(new Color(255, 255, 255, 235));

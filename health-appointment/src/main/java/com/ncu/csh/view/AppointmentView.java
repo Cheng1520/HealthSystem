@@ -39,15 +39,16 @@ public class AppointmentView extends JPanel {
         bg.add(UITheme.gradientHeader("预约与跟踪", "预约体检 · 结果分析 · 病史对比"), BorderLayout.NORTH);
 
         // 顶部工具栏
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         toolbar.setOpaque(false);
+        toolbar.setBorder(BorderFactory.createEmptyBorder(12, 14, 14, 14));
         toolbar.add(new JLabel("搜索用户"));
-        tfSearch = new JTextField(12);
+        tfSearch = UITheme.textField(12);
         toolbar.add(tfSearch);
-        JButton btnSearch = UITheme.primaryButton("查询");
-        JButton btnAdd = UITheme.plainButton("新增预约");
-        JButton btnEdit = UITheme.plainButton("修改");
-        JButton btnDelete = UITheme.plainButton("删除");
+        JButton btnSearch = UITheme.blueButton("查询");
+        JButton btnAdd = UITheme.blueButton("新增预约");
+        JButton btnEdit = UITheme.orangeButton("修改");
+        JButton btnDelete = UITheme.redButton("删除");
         JButton btnFinish = UITheme.plainButton("标记完成");
         JButton btnResult = UITheme.plainButton("录入结果");
         JButton btnHistory = UITheme.plainButton("病史对比");
@@ -71,9 +72,9 @@ public class AppointmentView extends JPanel {
             }
         };
         table = new JTable(tableModel);
-        table.setRowHeight(28);
-        table.getTableHeader().setReorderingAllowed(false);
+        UITheme.styleTable(table);
         JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(0, 14, 14, 14));
         bg.add(scrollPane, BorderLayout.CENTER);
 
         loadData();
@@ -361,7 +362,7 @@ public class AppointmentView extends JPanel {
             m.addRow(row);
         }
         JTable t = new JTable(m);
-        t.setRowHeight(26);
+        UITheme.styleTable(t);
         JScrollPane sp = new JScrollPane(t);
         sp.setPreferredSize(new Dimension(420, 220));
 

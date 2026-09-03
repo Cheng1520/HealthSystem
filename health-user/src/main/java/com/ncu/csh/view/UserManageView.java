@@ -33,16 +33,17 @@ public class UserManageView extends JPanel {
         bg.add(UITheme.gradientHeader("用户管理", "系统账号的查询 · 新增 · 修改 · 删除"), BorderLayout.NORTH);
 
         // 工具栏
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 10));
+        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         toolbar.setOpaque(false);
+        toolbar.setBorder(BorderFactory.createEmptyBorder(12, 14, 14, 14));
         toolbar.add(new JLabel("账号/姓名"));
-        tfKeyword = new JTextField(12);
+        tfKeyword = UITheme.textField(12);
         toolbar.add(tfKeyword);
-        JButton btnSearch = UITheme.primaryButton("查询");
+        JButton btnSearch = UITheme.blueButton("查询");
         JButton btnReset = UITheme.plainButton("重置");
-        JButton btnAdd = UITheme.plainButton("新增用户");
-        JButton btnEdit = UITheme.plainButton("修改");
-        JButton btnDelete = UITheme.plainButton("删除");
+        JButton btnAdd = UITheme.blueButton("新增用户");
+        JButton btnEdit = UITheme.orangeButton("修改");
+        JButton btnDelete = UITheme.redButton("删除");
         JButton btnExport = UITheme.plainButton("导出报表");
         JButton btnPrev = UITheme.plainButton("上一页");
         JButton btnNext = UITheme.plainButton("下一页");
@@ -65,10 +66,9 @@ public class UserManageView extends JPanel {
             }
         };
         table = new JTable(tableModel);
-        table.setRowHeight(28);
-        table.getTableHeader().setReorderingAllowed(false);
+        UITheme.styleTable(table);
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(0, 14, 14, 14));
         bg.add(scrollPane, BorderLayout.CENTER);
 
         loadData();

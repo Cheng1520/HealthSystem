@@ -32,19 +32,20 @@ public class CheckItemView extends JPanel {
         bg.add(UITheme.gradientHeader("检查项管理", "血红蛋白、白细胞等检查项的增删改查"), BorderLayout.NORTH);
 
         // 顶部工具栏
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 10));
+        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         toolbar.setOpaque(false);
+        toolbar.setBorder(BorderFactory.createEmptyBorder(12, 14, 14, 14));
         toolbar.add(new JLabel("编号"));
-        tfId = new JTextField(6);
+        tfId = UITheme.textField(6);
         toolbar.add(tfId);
         toolbar.add(new JLabel("名称"));
-        tfName = new JTextField(10);
+        tfName = UITheme.textField(10);
         toolbar.add(tfName);
-        JButton btnSearch = UITheme.primaryButton("查询");
+        JButton btnSearch = UITheme.blueButton("查询");
         JButton btnAll = UITheme.plainButton("查询全部");
-        JButton btnAdd = UITheme.plainButton("新增");
-        JButton btnEdit = UITheme.plainButton("修改");
-        JButton btnDelete = UITheme.plainButton("删除");
+        JButton btnAdd = UITheme.blueButton("新增");
+        JButton btnEdit = UITheme.orangeButton("修改");
+        JButton btnDelete = UITheme.redButton("删除");
         JButton btnExport = UITheme.plainButton("导出报表");
         JButton btnPrev = UITheme.plainButton("上一页");
         JButton btnNext = UITheme.plainButton("下一页");
@@ -56,7 +57,6 @@ public class CheckItemView extends JPanel {
         toolbar.add(btnExport);
         toolbar.add(btnPrev);
         toolbar.add(btnNext);
-        toolbar.setOpaque(false);
         bg.add(toolbar, BorderLayout.SOUTH);
 
         // 表格
@@ -68,10 +68,9 @@ public class CheckItemView extends JPanel {
             }
         };
         table = new JTable(tableModel);
-        table.setRowHeight(28);
-        table.getTableHeader().setReorderingAllowed(false);
+        UITheme.styleTable(table);
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
+        scrollPane.setBorder(BorderFactory.createEmptyBorder(0, 14, 14, 14));
         bg.add(scrollPane, BorderLayout.CENTER);
 
         loadData();
