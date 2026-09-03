@@ -10,12 +10,12 @@ import java.io.IOException;
 
 /**
  * 头像工具类 —— 本地头像的上传 / 读取 / 默认占位图。
- * 头像文件保存在用户主目录下 HealthSystem/avatars 目录，数据库只存文件名。
+ * 头像文件保存在项目根目录下的 avatars 目录（随 git 一起提交），数据库只存文件名。
  */
 public class AvatarUtil {
 
     private static final File AVATAR_DIR =
-            new File(System.getProperty("user.home"), "HealthSystem" + File.separator + "avatars");
+            new File(System.getProperty("user.dir"), "avatars");
 
     private AvatarUtil() {}
 
