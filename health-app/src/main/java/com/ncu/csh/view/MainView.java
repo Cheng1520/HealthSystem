@@ -8,8 +8,11 @@ import com.ncu.csh.util.Session;
 import com.ncu.csh.util.UITheme;
 import com.ncu.csh.util.Validators;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
@@ -271,6 +274,31 @@ public class MainView extends JFrame {
         JTextField tfPhone = new JTextField(u.getPhone() == null ? "" : u.getPhone(), 12);
         JPasswordField tfPwd = new JPasswordField(12);
 
+        // 头像：选择本地图片并预览
+        JLabel avatarPreview = new JLabel(AvatarUtil.loadIcon(u.getAvatar(), 48), SwingConstants.CENTER);
+        final File[] chosenAvatar = new File[1];
+        JButton btnAvatar = new JButton("选择头像");
+        btnAvatar.addActionListener(e -> {
+            JFileChooser fc = new JFileChooser();
+            fc.setFileFilter(new FileNameExtensionFilter("图片文件 (jpg/png/gif)", "jpg", "jpeg", "png", "gif"));
+            if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                File f = fc.getSelectedFile();
+                chosenAvatar[0] = f;
+                try {
+                    Image img = ImageIO.read(f);
+                    if (img != null) {
+                        avatarPreview.setIcon(new ImageIcon(img.getScaledInstance(48, 48, Image.SCALE_SMOOTH)));
+                    }
+                } catch (Exception ex) {
+                    avatarPreview.setIcon(AvatarUtil.defaultIcon(48));
+                }
+            }
+        });
+        JPanel avatarRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        avatarRow.setOpaque(false);
+        avatarRow.add(avatarPreview);
+        avatarRow.add(btnAvatar);
+
         JPanel panel = new JPanel(new GridLayout(0, 2, 8, 8));
         panel.add(new JLabel("用户名"));
         panel.add(tfUsername);
@@ -284,6 +312,8 @@ public class MainView extends JFrame {
         panel.add(tfPhone);
         panel.add(new JLabel("新密码(留空不修改)"));
         panel.add(tfPwd);
+        panel.add(new JLabel("头像"));
+        panel.add(avatarRow);
 
         int r = JOptionPane.showConfirmDialog(this, panel, "修改个人信息", JOptionPane.OK_CANCEL_OPTION);
         if (r != JOptionPane.OK_OPTION) {
@@ -330,6 +360,13 @@ public class MainView extends JFrame {
 
         try {
             userDAO.updateProfile(updated);
+            if (chosenAvatar[0] != null) {
+                String fn = AvatarUtil.save(chosenAvatar[0], u.getId());
+                if (fn != null) {
+                    userDAO.updateAvatar(u.getId(), fn);
+                    updated.setAvatar(fn);
+                }
+            }
             if (!newPwd.isEmpty()) {
                 userDAO.updatePassword(u.getId(), MD5Util.md5(newPwd));
             }
@@ -343,6 +380,9 @@ public class MainView extends JFrame {
         u.setGender(gender);
         u.setAge(age);
         u.setPhone(phone);
+        if (updated.getAvatar() != null) {
+            u.setAvatar(updated.getAvatar());
+        }
         if (!newPwd.isEmpty()) {
             u.setPassword(MD5Util.md5(newPwd));
         }
