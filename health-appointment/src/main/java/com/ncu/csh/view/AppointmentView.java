@@ -8,6 +8,7 @@ import com.ncu.csh.entity.CheckGroup;
 import com.ncu.csh.entity.CheckItem;
 import com.ncu.csh.entity.CheckResult;
 import com.ncu.csh.util.DateChooser;
+import com.ncu.csh.util.LineChartPanel;
 import com.ncu.csh.util.ReportUtil;
 import com.ncu.csh.util.ResultAnalyzer;
 import com.ncu.csh.util.Session;
@@ -69,13 +70,13 @@ public class AppointmentView extends JPanel {
             btnDelete = UITheme.redButton("删除");
             btnFinish = UITheme.plainButton("标记完成");
             btnResult = UITheme.plainButton("录入结果");
-            btnHistory = UITheme.plainButton("病史对比");
             toolbar.add(btnEdit);
             toolbar.add(btnDelete);
             toolbar.add(btnFinish);
             toolbar.add(btnResult);
-            toolbar.add(btnHistory);
         }
+        btnHistory = UITheme.plainButton("病史对比");
+        toolbar.add(btnHistory);
         toolbar.add(btnExport);
         bg.add(toolbar, BorderLayout.NORTH);
 
@@ -380,46 +381,66 @@ public class AppointmentView extends JPanel {
         }
     }
 
-    /** 病史对比与跟踪：选择用户和检查项，展示历史结果 */
+    /** 病史对比与跟踪：普通用户只能选择自己；医生/管理员可选择其他用户；结果以折线图展示 */
     private void historyCompare() {
+        boolean normal = isNormalUser();
         List<Object[]> users = appointmentDAO.listUsers();
         List<CheckItem> items = checkItemDAO.listAll();
-        if (users.isEmpty() || items.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "暂无用户或检查项数据", "提示", JOptionPane.WARNING_MESSAGE);
+        if (items.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "暂无检查项数据", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        JComboBox<String> cbUser = new JComboBox<>();
-        for (Object[] u : users) {
-            cbUser.addItem(u[0] + "-" + u[1]);
+        JComboBox<String> cbUser = null;
+        if (!normal) {
+            if (users.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "暂无用户数据", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            cbUser = new JComboBox<>();
+            for (Object[] u : users) {
+                cbUser.addItem(u[0] + "-" + u[1]);
+            }
         }
+
         JComboBox<String> cbItem = new JComboBox<>();
         for (CheckItem i : items) {
             cbItem.addItem(i.getItemName());
         }
 
-        JPanel panel = new JPanel(new GridLayout(2, 2, 8, 8));
-        panel.add(new JLabel("选择用户"));
-        panel.add(cbUser);
+        JPanel panel = new JPanel(new GridLayout(0, 2, 8, 8));
+        if (cbUser != null) {
+            panel.add(new JLabel("选择用户"));
+            panel.add(cbUser);
+        }
         panel.add(new JLabel("选择检查项"));
         panel.add(cbItem);
 
         int r = JOptionPane.showConfirmDialog(this, panel, "病史对比与跟踪", JOptionPane.OK_CANCEL_OPTION);
         if (r != JOptionPane.OK_OPTION) return;
 
-        int userId = Integer.parseInt(String.valueOf(users.get(cbUser.getSelectedIndex())[0]));
+        int userId = normal ? Session.currentUser.getId()
+                : Integer.parseInt(String.valueOf(users.get(cbUser.getSelectedIndex())[0]));
         int itemId = items.get(cbItem.getSelectedIndex()).getId();
         List<CheckResult> history = appointmentDAO.listHistory(userId, itemId);
 
         if (history.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "该用户没有该项的历史检查记录", "提示", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "没有该项的历史检查记录", "提示", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         String[] headers = {"日期", "数值", "单位", "分析"};
         List<String[]> rows = new ArrayList<>();
+        List<String> xLabels = new ArrayList<>();
+        List<Double> values = new ArrayList<>();
+        String unit = "";
         for (CheckResult h : history) {
             rows.add(new String[]{h.getCheckDate(), String.valueOf(h.getValue()), h.getUnit(), h.getAnalysis()});
+            xLabels.add(h.getCheckDate());
+            values.add(h.getValue());
+            if (h.getUnit() != null) {
+                unit = h.getUnit();
+            }
         }
 
         DefaultTableModel m = new DefaultTableModel(headers, 0);
@@ -431,11 +452,14 @@ public class AppointmentView extends JPanel {
         JScrollPane sp = new JScrollPane(t);
         sp.setPreferredSize(new Dimension(420, 220));
 
+        String itemName = items.get(cbItem.getSelectedIndex()).getItemName();
+        LineChartPanel chart = new LineChartPanel(itemName + " 历史趋势", unit, xLabels, values);
+
         JButton btnExport = UITheme.plainButton("导出该病史报表");
-        btnExport.addActionListener(e -> ReportUtil.exportHtml(
-                "病史对比：" + items.get(cbItem.getSelectedIndex()).getItemName(), headers, rows));
+        btnExport.addActionListener(e -> ReportUtil.exportHtml("病史对比：" + itemName, headers, rows));
 
         JPanel resultPanel = new JPanel(new BorderLayout(0, 8));
+        resultPanel.add(chart, BorderLayout.NORTH);
         resultPanel.add(sp, BorderLayout.CENTER);
         resultPanel.add(btnExport, BorderLayout.SOUTH);
 

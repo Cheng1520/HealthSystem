@@ -75,7 +75,7 @@ public class LoginView extends JFrame {
         gbc.gridx = 0;
         inner.add(new JLabel("身份"), gbc);
         gbc.gridx = 1;
-        cbRole = new JComboBox<>(new String[]{"全部", "普通用户", "医生", "管理员"});
+        cbRole = new JComboBox<>(new String[]{"普通用户", "医生", "管理员"});
         inner.add(cbRole, gbc);
 
         JButton btnLogin = UITheme.primaryButton("登 录");
@@ -125,9 +125,6 @@ public class LoginView extends JFrame {
         String account = tfUsername.getText().trim();
         String password = new String(tfPassword.getPassword());
         String role = (String) cbRole.getSelectedItem();
-        if ("全部".equals(role)) {
-            role = null;
-        }
         if (account.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(this, "账号和密码不能为空", "提示", JOptionPane.WARNING_MESSAGE);
             return;
@@ -150,16 +147,19 @@ public class LoginView extends JFrame {
     }
 
     private void forgetPassword() {
-        JPanel panel = new JPanel(new GridLayout(3, 2, 8, 8));
+        JPanel panel = new JPanel(new GridLayout(4, 2, 8, 8));
         JTextField tfUser = new JTextField();
         JTextField tfPhone = new JTextField();
+        JPasswordField tfNewPwd = new JPasswordField();
+        JPasswordField tfConfirmPwd = new JPasswordField();
         panel.add(new JLabel("用户名"));
         panel.add(tfUser);
         panel.add(new JLabel("注册电话"));
         panel.add(tfPhone);
         panel.add(new JLabel("新密码"));
-        JPasswordField tfNewPwd = new JPasswordField();
         panel.add(tfNewPwd);
+        panel.add(new JLabel("确认新密码"));
+        panel.add(tfConfirmPwd);
 
         int r = JOptionPane.showConfirmDialog(this, panel, "忘记密码", JOptionPane.OK_CANCEL_OPTION);
         if (r != JOptionPane.OK_OPTION) {
@@ -168,8 +168,13 @@ public class LoginView extends JFrame {
         String username = tfUser.getText().trim();
         String phone = tfPhone.getText().trim();
         String newPwd = new String(tfNewPwd.getPassword());
-        if (username.isEmpty() || phone.isEmpty() || newPwd.isEmpty()) {
+        String confirmPwd = new String(tfConfirmPwd.getPassword());
+        if (username.isEmpty() || phone.isEmpty() || newPwd.isEmpty() || confirmPwd.isEmpty()) {
             JOptionPane.showMessageDialog(this, "请填写完整信息", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!newPwd.equals(confirmPwd)) {
+            JOptionPane.showMessageDialog(this, "两次输入的新密码不一致", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
         try {

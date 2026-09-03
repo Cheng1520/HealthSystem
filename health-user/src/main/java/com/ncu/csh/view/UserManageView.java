@@ -7,6 +7,7 @@ import com.ncu.csh.util.MD5Util;
 import com.ncu.csh.util.ReportUtil;
 import com.ncu.csh.util.Session;
 import com.ncu.csh.util.UITheme;
+import com.ncu.csh.util.Validators;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -192,8 +193,13 @@ public class UserManageView extends JPanel {
         if (r != JOptionPane.OK_OPTION) return;
 
         String username = tfUsername.getText().trim();
+        String phone = tfPhone.getText().trim();
         if (username.isEmpty()) {
             JOptionPane.showMessageDialog(this, "账号不能为空", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!Validators.isValidPhone(phone)) {
+            JOptionPane.showMessageDialog(this, "请输入正确格式的手机号", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
         if (!isEdit && userDAO.existsByUsername(username)) {
@@ -207,7 +213,7 @@ public class UserManageView extends JPanel {
         u.setRealName(tfRealName.getText().trim());
         u.setGender((String) cbGender.getSelectedItem());
         u.setAge(parseInt(tfAge.getText()));
-        u.setPhone(tfPhone.getText().trim());
+        u.setPhone(phone);
         u.setRole((String) cbRole.getSelectedItem());
 
         try {

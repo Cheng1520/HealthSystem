@@ -4,6 +4,7 @@ import com.ncu.csh.dao.UserDAO;
 import com.ncu.csh.entity.User;
 import com.ncu.csh.util.MD5Util;
 import com.ncu.csh.util.UITheme;
+import com.ncu.csh.util.Validators;
 
 import javax.swing.*;
 import java.awt.*;
@@ -112,6 +113,10 @@ public class RegisterView extends JFrame {
         }
         if (!pwd.equals(pwd2)) {
             JOptionPane.showMessageDialog(this, "两次输入的密码不一致", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!Validators.isValidPhone(phone)) {
+            JOptionPane.showMessageDialog(this, "请输入正确格式的手机号", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
         try {
