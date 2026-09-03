@@ -195,7 +195,7 @@ public class MainView extends JFrame {
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 170));
 
-        JLabel avatar = new JLabel(AvatarUtil.loadIcon(Session.currentUser.getAvatar(), 60),
+        JLabel avatar = new JLabel(AvatarUtil.loadIcon(Session.currentUser.getAvatar(), 72),
                 SwingConstants.CENTER);
         avatar.setAlignmentX(Component.CENTER_ALIGNMENT);
         avatar.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -256,7 +256,7 @@ public class MainView extends JFrame {
                 + "<br><b>角色：</b>" + (u.getRole() == null ? "" : u.getRole())
                 + "</html>";
         JPanel panel = new JPanel(new BorderLayout(12, 0));
-        panel.add(new JLabel(AvatarUtil.loadIcon(u.getAvatar(), 72), SwingConstants.CENTER), BorderLayout.WEST);
+        panel.add(new JLabel(AvatarUtil.loadIcon(u.getAvatar(), 88), SwingConstants.CENTER), BorderLayout.WEST);
         panel.add(new JLabel(info), BorderLayout.CENTER);
         JOptionPane.showMessageDialog(this, panel, "个人信息", JOptionPane.PLAIN_MESSAGE);
     }
@@ -275,7 +275,7 @@ public class MainView extends JFrame {
         JPasswordField tfPwd = new JPasswordField(12);
 
         // 头像：选择本地图片并预览
-        JLabel avatarPreview = new JLabel(AvatarUtil.loadIcon(u.getAvatar(), 48), SwingConstants.CENTER);
+        JLabel avatarPreview = new JLabel(AvatarUtil.loadIcon(u.getAvatar(), 64), SwingConstants.CENTER);
         final File[] chosenAvatar = new File[1];
         JButton btnAvatar = new JButton("选择头像");
         btnAvatar.addActionListener(e -> {
@@ -287,10 +287,10 @@ public class MainView extends JFrame {
                 try {
                     Image img = ImageIO.read(f);
                     if (img != null) {
-                        avatarPreview.setIcon(new ImageIcon(img.getScaledInstance(48, 48, Image.SCALE_SMOOTH)));
+                        avatarPreview.setIcon(new ImageIcon(img.getScaledInstance(64, 64, Image.SCALE_SMOOTH)));
                     }
                 } catch (Exception ex) {
-                    avatarPreview.setIcon(AvatarUtil.defaultIcon(48));
+                    avatarPreview.setIcon(AvatarUtil.defaultIcon(64));
                 }
             }
         });

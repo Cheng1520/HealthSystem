@@ -73,7 +73,7 @@ public class UserManageView extends JPanel {
         };
         table = new JTable(tableModel);
         UITheme.styleTable(table);
-        table.setRowHeight(44);
+        table.setRowHeight(52);
         table.getColumnModel().getColumn(7).setCellRenderer(new CenterIconRenderer());
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder(0, 14, 14, 14));
@@ -100,7 +100,7 @@ public class UserManageView extends JPanel {
         for (User u : list) {
             tableModel.addRow(new Object[]{
                     u.getId(), u.getUsername(), u.getRealName(), u.getGender(), u.getAge(), u.getPhone(), u.getRole(),
-                    AvatarUtil.loadIcon(u.getAvatar(), 32)
+                    AvatarUtil.loadIcon(u.getAvatar(), 40)
             });
         }
     }
@@ -156,8 +156,8 @@ public class UserManageView extends JPanel {
         panel.add(cbRole);
 
         // 头像：选择本地图片并预览
-        JLabel avatarPreview = new JLabel(isEdit ? AvatarUtil.loadIcon(user.getAvatar(), 48)
-                : AvatarUtil.defaultIcon(48), SwingConstants.CENTER);
+        JLabel avatarPreview = new JLabel(isEdit ? AvatarUtil.loadIcon(user.getAvatar(), 64)
+                : AvatarUtil.defaultIcon(64), SwingConstants.CENTER);
         final File[] chosenAvatar = new File[1];
         JButton btnAvatar = new JButton("选择头像");
         btnAvatar.addActionListener(e -> {
@@ -169,10 +169,10 @@ public class UserManageView extends JPanel {
                 try {
                     Image img = ImageIO.read(f);
                     if (img != null) {
-                        avatarPreview.setIcon(new ImageIcon(img.getScaledInstance(48, 48, Image.SCALE_SMOOTH)));
+                        avatarPreview.setIcon(new ImageIcon(img.getScaledInstance(64, 64, Image.SCALE_SMOOTH)));
                     }
                 } catch (Exception ex) {
-                    avatarPreview.setIcon(AvatarUtil.defaultIcon(48));
+                    avatarPreview.setIcon(AvatarUtil.defaultIcon(64));
                 }
             }
         });
