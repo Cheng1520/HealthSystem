@@ -11,7 +11,8 @@ public class User {
     private String gender;     // 性别
     private Integer age;       // 年龄
     private String phone;      // 电话
-    private String role;       // 角色：管理员 / 普通用户
+    private String role;       // 角色：管理员 / 医生 / 普通用户
+    private String avatar;     // 头像文件名（本地 avatars 目录）
 
     public User() {}
 
@@ -42,4 +43,6 @@ public class User {
     public void setPhone(String phone) { this.phone = phone; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+    public String getAvatar() { return avatar; }
+    public void setAvatar(String avatar) { this.avatar = avatar; }
 }

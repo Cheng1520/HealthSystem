@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,7 +18,7 @@ public class UserDAO {
 
     /** 登录：按用户名 + 密码（MD5）查询 */
     public User login(String username, String passwordMd5) {
-        String sql = "SELECT id,username,password,real_name,gender,age,phone,role FROM user "
+        String sql = "SELECT id,username,password,real_name,gender,age,phone,role,avatar FROM user "
                 + "WHERE username=? AND password=?";
         Connection conn = null;
         PreparedStatement ps = null;
@@ -105,7 +106,7 @@ public class UserDAO {
 
     /** 忘记密码校验：按用户名 + 电话查询（用于找回） */
     public User findByUsernameAndPhone(String username, String phone) {
-        String sql = "SELECT id,username,password,real_name,gender,age,phone,role FROM user "
+        String sql = "SELECT id,username,password,real_name,gender,age,phone,role,avatar FROM user "
                 + "WHERE username=? AND phone=?";
         Connection conn = null;
         PreparedStatement ps = null;
@@ -148,7 +149,7 @@ public class UserDAO {
 
     /** 用户管理：按账号/姓名模糊分页查询 */
     public List<User> queryByPage(String keyword, int page, int pageSize) {
-        String sql = "SELECT id,username,password,real_name,gender,age,phone,role FROM user "
+        String sql = "SELECT id,username,password,real_name,gender,age,phone,role,avatar FROM user "
                 + "WHERE username LIKE ? OR real_name LIKE ? ORDER BY id LIMIT ?,?";
         Connection conn = null;
         PreparedStatement ps = null;
@@ -174,14 +175,15 @@ public class UserDAO {
         }
     }
 
-    /** 用户管理：新增用户（含角色） */
+    /** 用户管理：新增用户（含角色），返回新用户的自增 ID */
     public int add(User user) {
         String sql = "INSERT INTO user(username,password,real_name,gender,age,phone,role) VALUES(?,?,?,?,?,?,?)";
         Connection conn = null;
         PreparedStatement ps = null;
+        ResultSet rs = null;
         try {
             conn = DBUtil.getConnection();
-            ps = conn.prepareStatement(sql);
+            ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getPassword());
             ps.setString(3, user.getRealName());
@@ -193,11 +195,16 @@ public class UserDAO {
             }
             ps.setString(6, user.getPhone());
             ps.setString(7, user.getRole());
-            return ps.executeUpdate();
+            ps.executeUpdate();
+            rs = ps.getGeneratedKeys();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
         } catch (SQLException e) {
             throw new RuntimeException("新增用户失败", e);
         } finally {
-            DBUtil.close(ps, conn);
+            DBUtil.close(rs, ps, conn);
         }
     }
 
@@ -245,6 +252,24 @@ public class UserDAO {
         }
     }
 
+    /** 用户管理：单独更新头像文件名 */
+    public int updateAvatar(int id, String avatar) {
+        String sql = "UPDATE user SET avatar=? WHERE id=?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, avatar);
+            ps.setInt(2, id);
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("更新头像失败", e);
+        } finally {
+            DBUtil.close(ps, conn);
+        }
+    }
+
     private User mapRow(ResultSet rs) throws SQLException {
         User u = new User();
         u.setId(rs.getInt("id"));
@@ -256,6 +281,7 @@ public class UserDAO {
         u.setAge(rs.wasNull() ? null : age);
         u.setPhone(rs.getString("phone"));
         u.setRole(rs.getString("role"));
+        u.setAvatar(rs.getString("avatar"));
         return u;
     }
 }

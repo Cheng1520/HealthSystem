@@ -4,6 +4,7 @@ import com.ncu.csh.dao.AppointmentDAO;
 import com.ncu.csh.dao.CheckGroupDAO;
 import com.ncu.csh.dao.CheckItemDAO;
 import com.ncu.csh.dao.UserDAO;
+import com.ncu.csh.util.AvatarUtil;
 import com.ncu.csh.util.MD5Util;
 import com.ncu.csh.util.ReportUtil;
 import com.ncu.csh.util.Session;
@@ -12,6 +13,7 @@ import com.ncu.csh.util.UITheme;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -44,8 +46,9 @@ public class MainView extends JFrame {
         String displayName = Session.currentUser.getRealName() == null
                 ? Session.currentUser.getUsername() : Session.currentUser.getRealName();
         String role = Session.currentUser.getRole();
-        boolean isAdmin = "管理员".equals(role);
         String roleText = (role == null || role.isEmpty()) ? "" : "（" + role + "）";
+        List<String> modules = roleModules();
+        String defaultCard = modules.get(0);
 
         // 背景面板
         JPanel bg = UITheme.backgroundPanel("bg_main.png",
@@ -60,11 +63,11 @@ public class MainView extends JFrame {
         JPanel body = new JPanel(new BorderLayout(12, 0));
         body.setOpaque(false);
         body.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        body.add(buildNav(isAdmin), BorderLayout.WEST);
-        body.add(buildContent(isAdmin), BorderLayout.CENTER);
+        body.add(buildNav(modules, defaultCard), BorderLayout.WEST);
+        body.add(buildContent(modules), BorderLayout.CENTER);
         bg.add(body, BorderLayout.CENTER);
 
-        cardLayout.show(content, isAdmin ? "检查项管理" : "预约与跟踪");
+        cardLayout.show(content, defaultCard);
     }
 
     /** 顶部标题栏：左侧标题，右上角 修改密码 / 退出登录 */
@@ -103,8 +106,32 @@ public class MainView extends JFrame {
         return header;
     }
 
+    /** 角色 → 可见模块（三角色权限：管理员 > 医生 > 普通用户） */
+    private List<String> roleModules() {
+        String role = Session.currentUser.getRole();
+        if ("管理员".equals(role)) {
+            return Arrays.asList("检查项管理", "检查组管理", "预约与跟踪", "报表统计", "用户管理");
+        }
+        if ("医生".equals(role)) {
+            return Arrays.asList("检查项管理", "检查组管理", "预约与跟踪", "报表统计");
+        }
+        return Arrays.asList("预约与跟踪", "报表统计");
+    }
+
+    /** 模块名 → 导航图标 */
+    private String iconFor(String module) {
+        switch (module) {
+            case "检查项管理": return "📋";
+            case "检查组管理": return "📑";
+            case "预约与跟踪": return "📅";
+            case "报表统计": return "📊";
+            case "用户管理": return "👤";
+            default: return "•";
+        }
+    }
+
     /** 左侧导航菜单：按角色显示模块入口 */
-    private JPanel buildNav(boolean isAdmin) {
+    private JPanel buildNav(List<String> modules, String defaultCard) {
         JPanel nav = new JPanel();
         nav.setLayout(new BoxLayout(nav, BoxLayout.Y_AXIS));
         nav.setOpaque(false);
@@ -113,19 +140,13 @@ public class MainView extends JFrame {
         nav.add(buildUserCard());
         nav.add(Box.createVerticalStrut(14));
 
-        String defaultCard = isAdmin ? "检查项管理" : "预约与跟踪";
-        if (isAdmin) {
-            nav.add(navButton("📋", "检查项管理", "检查项管理", defaultCard));
-            nav.add(Box.createVerticalStrut(10));
-            nav.add(navButton("📑", "检查组管理", "检查组管理", defaultCard));
-            nav.add(Box.createVerticalStrut(10));
-        }
-        nav.add(navButton("📅", "预约与跟踪", "预约与跟踪", defaultCard));
-        nav.add(Box.createVerticalStrut(10));
-        nav.add(navButton("📊", "报表统计", "报表统计", defaultCard));
-        if (isAdmin) {
-            nav.add(Box.createVerticalStrut(10));
-            nav.add(navButton("👤", "用户管理", "用户管理", defaultCard));
+        boolean first = true;
+        for (String module : modules) {
+            if (!first) {
+                nav.add(Box.createVerticalStrut(10));
+            }
+            nav.add(navButton(iconFor(module), module, module, defaultCard));
+            first = false;
         }
         nav.add(Box.createVerticalGlue());
         return nav;
@@ -181,7 +202,11 @@ public class MainView extends JFrame {
                 new UITheme.RoundedBorder(new Color(0xE2, 0xE8, 0xF0), 14),
                 BorderFactory.createEmptyBorder(16, 12, 16, 12)));
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 170));
+
+        JLabel avatar = new JLabel(AvatarUtil.loadIcon(Session.currentUser.getAvatar(), 60),
+                SwingConstants.CENTER);
+        avatar.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel welcome = new JLabel("欢迎登录", SwingConstants.CENTER);
         welcome.setFont(new Font("Microsoft YaHei", Font.BOLD, 15));
@@ -193,6 +218,8 @@ public class MainView extends JFrame {
         info.setForeground(UITheme.TEXT_GRAY);
         info.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        card.add(avatar);
+        card.add(Box.createVerticalStrut(8));
         card.add(welcome);
         card.add(Box.createVerticalStrut(6));
         card.add(info);
@@ -208,20 +235,16 @@ public class MainView extends JFrame {
     }
 
     /** 右侧内容区（CardLayout 承载各模块面板） */
-    private JPanel buildContent(boolean isAdmin) {
+    private JPanel buildContent(List<String> modules) {
         cardLayout = new CardLayout();
         content = new JPanel(cardLayout);
         content.setOpaque(false);
 
-        if (isAdmin) {
-            content.add(new CheckItemView(), "检查项管理");
-            content.add(new CheckGroupView(), "检查组管理");
-        }
-        content.add(new AppointmentView(), "预约与跟踪");
-        content.add(buildReportPanel(), "报表统计");
-        if (isAdmin) {
-            content.add(new UserManageView(), "用户管理");
-        }
+        if (modules.contains("检查项管理")) content.add(new CheckItemView(), "检查项管理");
+        if (modules.contains("检查组管理")) content.add(new CheckGroupView(), "检查组管理");
+        if (modules.contains("预约与跟踪")) content.add(new AppointmentView(), "预约与跟踪");
+        if (modules.contains("报表统计")) content.add(buildReportPanel(), "报表统计");
+        if (modules.contains("用户管理")) content.add(new UserManageView(), "用户管理");
         return content;
     }
 

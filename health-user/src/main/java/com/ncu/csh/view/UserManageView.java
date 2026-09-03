@@ -2,14 +2,19 @@ package com.ncu.csh.view;
 
 import com.ncu.csh.dao.UserDAO;
 import com.ncu.csh.entity.User;
+import com.ncu.csh.util.AvatarUtil;
 import com.ncu.csh.util.MD5Util;
 import com.ncu.csh.util.ReportUtil;
 import com.ncu.csh.util.Session;
 import com.ncu.csh.util.UITheme;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,7 +63,7 @@ public class UserManageView extends JPanel {
         bg.add(toolbar, BorderLayout.SOUTH);
 
         // 表格
-        String[] headers = {"编号", "账号", "姓名", "性别", "年龄", "电话", "角色"};
+        String[] headers = {"编号", "账号", "姓名", "性别", "年龄", "电话", "角色", "头像"};
         tableModel = new DefaultTableModel(headers, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -67,6 +72,8 @@ public class UserManageView extends JPanel {
         };
         table = new JTable(tableModel);
         UITheme.styleTable(table);
+        table.setRowHeight(44);
+        table.getColumnModel().getColumn(7).setCellRenderer(new CenterIconRenderer());
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createEmptyBorder(0, 14, 14, 14));
         bg.add(scrollPane, BorderLayout.CENTER);
@@ -91,7 +98,8 @@ public class UserManageView extends JPanel {
         List<User> list = userDAO.queryByPage(tfKeyword.getText().trim(), page, pageSize);
         for (User u : list) {
             tableModel.addRow(new Object[]{
-                    u.getId(), u.getUsername(), u.getRealName(), u.getGender(), u.getAge(), u.getPhone(), u.getRole()
+                    u.getId(), u.getUsername(), u.getRealName(), u.getGender(), u.getAge(), u.getPhone(), u.getRole(),
+                    AvatarUtil.loadIcon(u.getAvatar(), 32)
             });
         }
     }
@@ -125,7 +133,7 @@ public class UserManageView extends JPanel {
         JComboBox<String> cbGender = new JComboBox<>(new String[]{"男", "女"});
         JTextField tfAge = new JTextField(isEdit && user.getAge() != null ? String.valueOf(user.getAge()) : "", 6);
         JTextField tfPhone = new JTextField(isEdit ? user.getPhone() : "", 12);
-        JComboBox<String> cbRole = new JComboBox<>(new String[]{"普通用户", "管理员"});
+        JComboBox<String> cbRole = new JComboBox<>(new String[]{"普通用户", "医生", "管理员"});
         JTextField tfPwd = new JTextField("123456", 12);
         if (isEdit) {
             if (user.getGender() != null) cbGender.setSelectedItem(user.getGender());
@@ -145,6 +153,35 @@ public class UserManageView extends JPanel {
         panel.add(tfPhone);
         panel.add(new JLabel("角色"));
         panel.add(cbRole);
+
+        // 头像：选择本地图片并预览
+        JLabel avatarPreview = new JLabel(isEdit ? AvatarUtil.loadIcon(user.getAvatar(), 48)
+                : AvatarUtil.defaultIcon(48), SwingConstants.CENTER);
+        final File[] chosenAvatar = new File[1];
+        JButton btnAvatar = new JButton("选择头像");
+        btnAvatar.addActionListener(e -> {
+            JFileChooser fc = new JFileChooser();
+            fc.setFileFilter(new FileNameExtensionFilter("图片文件 (jpg/png/gif)", "jpg", "jpeg", "png", "gif"));
+            if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                File f = fc.getSelectedFile();
+                chosenAvatar[0] = f;
+                try {
+                    Image img = ImageIO.read(f);
+                    if (img != null) {
+                        avatarPreview.setIcon(new ImageIcon(img.getScaledInstance(48, 48, Image.SCALE_SMOOTH)));
+                    }
+                } catch (Exception ex) {
+                    avatarPreview.setIcon(AvatarUtil.defaultIcon(48));
+                }
+            }
+        });
+        JPanel avatarRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        avatarRow.setOpaque(false);
+        avatarRow.add(avatarPreview);
+        avatarRow.add(btnAvatar);
+        panel.add(new JLabel("头像"));
+        panel.add(avatarRow);
+
         if (!isEdit) {
             panel.add(new JLabel("初始密码"));
             panel.add(tfPwd);
@@ -176,9 +213,17 @@ public class UserManageView extends JPanel {
         try {
             if (isEdit) {
                 userDAO.update(u);
+                if (chosenAvatar[0] != null) {
+                    String fn = AvatarUtil.save(chosenAvatar[0], u.getId());
+                    if (fn != null) userDAO.updateAvatar(u.getId(), fn);
+                }
             } else {
                 u.setPassword(MD5Util.md5(tfPwd.getText().trim()));
-                userDAO.add(u);
+                int newId = userDAO.add(u);
+                if (chosenAvatar[0] != null) {
+                    String fn = AvatarUtil.save(chosenAvatar[0], newId);
+                    if (fn != null) userDAO.updateAvatar(newId, fn);
+                }
             }
             loadData();
         } catch (RuntimeException ex) {
@@ -221,13 +266,29 @@ public class UserManageView extends JPanel {
         String[] headers = {"编号", "账号", "姓名", "性别", "年龄", "电话", "角色"};
         List<String[]> rows = new ArrayList<>();
         for (int i = 0; i < tableModel.getRowCount(); i++) {
-            String[] row = new String[tableModel.getColumnCount()];
-            for (int j = 0; j < tableModel.getColumnCount(); j++) {
+            String[] row = new String[7];
+            for (int j = 0; j < 7; j++) {
                 Object v = tableModel.getValueAt(i, j);
                 row[j] = v == null ? "" : v.toString();
             }
             rows.add(row);
         }
         ReportUtil.exportHtml("用户报表", headers, rows);
+    }
+
+    /** 头像列渲染器：居中显示，保持斑马纹与选中态 */
+    private static class CenterIconRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            setHorizontalAlignment(SwingConstants.CENTER);
+            if (isSelected) {
+                setBackground(UITheme.SELECTION);
+            } else {
+                setBackground(row % 2 == 0 ? Color.WHITE : UITheme.ZEBRA);
+            }
+            return c;
+        }
     }
 }

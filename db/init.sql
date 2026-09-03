@@ -3,6 +3,7 @@
 -- 使用方法：用 MySQL 客户端（Navicat / 命令行 / Workbench）复制运行即可
 -- 默认账号（密码均为 123456）：
 --   管理员    admin     / 123456
+--   医生      doctor    / 123456
 --   普通用户  zhangsan  / 123456
 --   普通用户  lisi      / 123456
 -- ============================================================
@@ -22,7 +23,8 @@ CREATE TABLE `user` (
     `gender`     VARCHAR(10)  DEFAULT NULL            COMMENT '性别',
     `age`        INT          DEFAULT NULL            COMMENT '年龄',
     `phone`      VARCHAR(20)  DEFAULT NULL            COMMENT '电话',
-    `role`       VARCHAR(20)  NOT NULL DEFAULT '普通用户' COMMENT '角色: 管理员/普通用户',
+    `role`       VARCHAR(20)  NOT NULL DEFAULT '普通用户' COMMENT '角色: 管理员/医生/普通用户',
+    `avatar`     VARCHAR(255) DEFAULT NULL            COMMENT '头像文件名(本地avatars目录)',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
@@ -101,6 +103,7 @@ CREATE TABLE `check_result` (
 -- 用户（密码均为 123456 的 MD5）
 INSERT INTO `user` (`username`, `password`, `real_name`, `gender`, `age`, `phone`, `role`) VALUES
 ('admin',    'e10adc3949ba59abbe56e057f20f883e', '管理员', '男', 30, '13800000001', '管理员'),
+('doctor',   'e10adc3949ba59abbe56e057f20f883e', '王医生', '女', 35, '13800000004', '医生'),
 ('zhangsan', 'e10adc3949ba59abbe56e057f20f883e', '张三',   '男', 25, '13800000002', '普通用户'),
 ('lisi',     'e10adc3949ba59abbe56e057f20f883e', '李四',   '女', 40, '13800000003', '普通用户');
 
