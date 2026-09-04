@@ -21,15 +21,18 @@ public class CheckItemView extends JPanel {
     private DefaultTableModel tableModel;
     private JTextField tfId;
     private JTextField tfName;
+    private JLabel lblPage;
+    private JComboBox<Integer> cbPageSize;
     private int page = 1;
-    private final int pageSize = 8;
+    private int totalPages = 1;
+    private int pageSize = 20;
 
     public CheckItemView() {
         JPanel bg = UITheme.backgroundPanel("bg_panel.png", new Color(0xF5, 0xF9, 0xFF), new Color(0xEA, 0xF4, 0xF8));
         bg.setLayout(new BorderLayout());
         setLayout(new BorderLayout());
         add(bg, BorderLayout.CENTER);
-        bg.add(UITheme.gradientHeader("检查项管理", "血红蛋白、白细胞等检查项的增删改查"), BorderLayout.NORTH);
+        bg.add(UITheme.lightHeader("检查项管理", "血红蛋白、白细胞等检查项的增删改查"), BorderLayout.NORTH);
 
         // 顶部工具栏
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -57,6 +60,18 @@ public class CheckItemView extends JPanel {
         toolbar.add(btnExport);
         toolbar.add(btnPrev);
         toolbar.add(btnNext);
+        JLabel lbPageSize = new JLabel("  每页");
+        lbPageSize.setForeground(UITheme.GRAY_BTN_FG);
+        toolbar.add(lbPageSize);
+        cbPageSize = new JComboBox<>(new Integer[]{5, 10, 15, 20});
+        cbPageSize.setSelectedItem(20);
+        toolbar.add(cbPageSize);
+        JLabel lbPageSize2 = new JLabel("条");
+        lbPageSize2.setForeground(UITheme.GRAY_BTN_FG);
+        toolbar.add(lbPageSize2);
+        lblPage = new JLabel("  第 1 / 1 页");
+        lblPage.setForeground(UITheme.GRAY_BTN_FG);
+        toolbar.add(lblPage);
         bg.add(toolbar, BorderLayout.SOUTH);
 
         // 表格
@@ -85,18 +100,32 @@ public class CheckItemView extends JPanel {
         btnDelete.addActionListener(e -> deleteSelected());
         btnExport.addActionListener(e -> export());
         btnPrev.addActionListener(e -> { if (page > 1) { page--; loadData(); } });
-        btnNext.addActionListener(e -> { page++; loadData(); });
+        // 下一页要有上界保护，避免翻出空白页
+        btnNext.addActionListener(e -> { if (page < totalPages) { page++; loadData(); } });
+        // 每页条数改变后回到第一页再刷新
+        cbPageSize.addActionListener(e -> {
+            pageSize = (Integer) cbPageSize.getSelectedItem();
+            page = 1;
+            loadData();
+        });
     }
 
     private void loadData() {
         tableModel.setRowCount(0);
-        List<CheckItem> list = checkItemDAO.queryByPage(
-                tfId.getText().trim(), tfName.getText().trim(), page, pageSize);
+        String idKw = tfId.getText().trim();
+        String nameKw = tfName.getText().trim();
+        // 先按当前条件算出总页数并校正页码，再查询，避免翻出空白页
+        int total = checkItemDAO.countByKeyword(idKw, nameKw);
+        totalPages = Math.max(1, (int) Math.ceil((double) total / pageSize));
+        if (page > totalPages) page = totalPages;
+        if (page < 1) page = 1;
+        List<CheckItem> list = checkItemDAO.queryByPage(idKw, nameKw, page, pageSize);
         for (CheckItem c : list) {
             tableModel.addRow(new Object[]{
                     c.getId(), c.getItemName(), c.getUnit(), c.getRefMin(), c.getRefMax(), c.getRemark()
             });
         }
+        lblPage.setText("  第 " + page + " / " + totalPages + " 页（共 " + total + " 条）");
     }
 
     private CheckItem getSelectedItem() {
@@ -118,7 +147,11 @@ public class CheckItemView extends JPanel {
 
     private Double toDouble(Object o) {
         if (o == null || o.toString().isEmpty()) return null;
-        return Double.parseDouble(o.toString());
+        try {
+            return Double.parseDouble(o.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private void showEditDialog(CheckItem item) {
@@ -149,6 +182,16 @@ public class CheckItemView extends JPanel {
             JOptionPane.showMessageDialog(this, "检查项名称不能为空", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        // 禁止重名：新增/修改时若同名（排除自身）则不允许提交
+        try {
+            if (checkItemDAO.existsByName(name, isEdit ? item.getId() : null)) {
+                JOptionPane.showMessageDialog(this, "该检查项名称已存在，请换一个名称", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, "名称校验失败：" + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         CheckItem c = new CheckItem();
         c.setId(isEdit ? item.getId() : null);
         c.setItemName(name);
@@ -163,6 +206,13 @@ public class CheckItemView extends JPanel {
             } else {
                 checkItemDAO.add(c);
             }
+            // 新增/修改成功后：清空搜索框、跳到最后一页再刷新，确保新数据能在界面上看到
+            tfId.setText("");
+            tfName.setText("");
+            if (!isEdit) {
+                int total = checkItemDAO.countAll();
+                page = Math.max(1, (int) Math.ceil((double) total / pageSize));
+            }
             loadData();
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
@@ -171,7 +221,14 @@ public class CheckItemView extends JPanel {
 
     private Double parseDouble(String s) {
         s = s.trim();
-        return s.isEmpty() ? null : Double.parseDouble(s);
+        if (s.isEmpty()) return null;
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            // 非法数字（如 3,5 / abc 等）不再抛异常导致新增/修改失败
+            JOptionPane.showMessageDialog(this, "参考值必须是数字（可留空）", "提示", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
     }
 
     private void deleteSelected() {

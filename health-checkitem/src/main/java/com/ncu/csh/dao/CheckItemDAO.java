@@ -86,6 +86,53 @@ public class CheckItemDAO {
         }
     }
 
+    /** 按编号/名称关键字统计符合条件的总数（用于计算分页总页数，与 queryByPage 条件一致） */
+    public int countByKeyword(String idKeyword, String nameKeyword) {
+        String sql = "SELECT COUNT(*) FROM check_item WHERE CAST(id AS CHAR) LIKE ? AND item_name LIKE ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, "%" + idKeyword + "%");
+            ps.setString(2, "%" + nameKeyword + "%");
+            rs = ps.executeQuery();
+            rs.next();
+            return rs.getInt(1);
+        } catch (SQLException e) {
+            throw new RuntimeException("统计检查项失败", e);
+        } finally {
+            DBUtil.close(rs, ps, conn);
+        }
+    }
+
+    /** 按名称判断是否存在（用于禁止重名新增/修改） */
+    public boolean existsByName(String name, Integer excludeId) {
+        String sql = "SELECT COUNT(*) FROM check_item WHERE item_name=?";
+        if (excludeId != null) {
+            sql += " AND id<>?";
+        }
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, name);
+            if (excludeId != null) {
+                ps.setInt(2, excludeId);
+            }
+            rs = ps.executeQuery();
+            rs.next();
+            return rs.getInt(1) > 0;
+        } catch (SQLException e) {
+            throw new RuntimeException("查询检查项名称失败", e);
+        } finally {
+            DBUtil.close(rs, ps, conn);
+        }
+    }
+
     /** 新增检查项 */
     public int add(CheckItem item) {
         String sql = "INSERT INTO check_item(item_name,unit,ref_min,ref_max,remark) VALUES(?,?,?,?,?)";

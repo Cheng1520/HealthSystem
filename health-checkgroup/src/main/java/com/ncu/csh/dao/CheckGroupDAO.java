@@ -132,6 +132,27 @@ public class CheckGroupDAO {
         }
     }
 
+    /** 按编号/名称关键字统计符合条件的总数（用于计算分页总页数，与 queryByPage 条件一致） */
+    public int countByKeyword(String idKeyword, String nameKeyword) {
+        String sql = "SELECT COUNT(*) FROM check_group WHERE CAST(id AS CHAR) LIKE ? AND group_name LIKE ?";
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+        try {
+            conn = DBUtil.getConnection();
+            ps = conn.prepareStatement(sql);
+            ps.setString(1, "%" + idKeyword + "%");
+            ps.setString(2, "%" + nameKeyword + "%");
+            rs = ps.executeQuery();
+            rs.next();
+            return rs.getInt(1);
+        } catch (SQLException e) {
+            throw new RuntimeException("统计检查组失败", e);
+        } finally {
+            DBUtil.close(rs, ps, conn);
+        }
+    }
+
     /** 新增检查组（含勾选的检查项），事务保证一致性 */
     public int add(CheckGroup group, List<Integer> itemIds) {
         Connection conn = null;

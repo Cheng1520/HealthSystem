@@ -204,6 +204,30 @@ public class UITheme {
         return p;
     }
 
+    /** 浅色标题栏（透明背景，深色标题字）—— 用于与浅色工具栏、浅色内容区一致的页面 */
+    public static JPanel lightHeader(String title, String subtitle) {
+        JPanel p = new JPanel(new BorderLayout());
+        p.setOpaque(false); // 透明，露出底下 bg_panel 浅色背景
+        p.setPreferredSize(new Dimension(0, 82));
+        p.setBorder(BorderFactory.createEmptyBorder(14, 24, 14, 24));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(FONT_TITLE);
+        titleLabel.setForeground(TEXT_MAIN);
+
+        JLabel subLabel = new JLabel(subtitle);
+        subLabel.setFont(FONT_SUBTITLE);
+        subLabel.setForeground(TEXT_GRAY);
+
+        JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 4));
+        textPanel.setOpaque(false);
+        textPanel.add(titleLabel);
+        textPanel.add(subLabel);
+
+        p.add(textPanel, BorderLayout.WEST);
+        return p;
+    }
+
     /** 卡片式圆角边框 */
     public static Border cardBorder() {
         return new RoundedBorder(BORDER_LIGHT, 14);

@@ -14,7 +14,7 @@ public class DBUtil {
             "jdbc:mysql://127.0.0.1:3306/healthsystem"
             + "?characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true";
     private static final String USERNAME = "root";
-    private static final String PASSWORD = "123456";
+    private static final String PASSWORD = "123123";
 
     // 静态代码块：只加载一次驱动
     static {
