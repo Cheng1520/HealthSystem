@@ -17,7 +17,7 @@ import java.util.List;
  * 检查组管理界面 —— 检查组管理模块
  */
 public class CheckGroupView extends JPanel {
-
+//噶哟噶哟
     private final CheckGroupDAO checkGroupDAO = new CheckGroupDAO();
     private final CheckItemDAO checkItemDAO = new CheckItemDAO();
     private JTable table;
